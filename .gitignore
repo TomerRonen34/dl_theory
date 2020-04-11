@@ -1,3 +1,6 @@
+# Specific to this project
+cifar-10-batches-py
+
 # PyCharm project files
 .idea
 
