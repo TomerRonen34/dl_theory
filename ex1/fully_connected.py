@@ -37,14 +37,6 @@ class FullyConnectedClassifier:
                                                             init_gaussian_std=init_gaussian_std)
             self.hidden_layers.append(intermediate_hidden_layer)
 
-    def __choose_activation_func(self, activation: str):
-        if activation.lower() == "relu":
-            self.activation = torch.relu
-        elif activation.lower() == "tanh":
-            self.activation = torch.tanh
-        else:
-            raise ValueError('activation should be one of ["relu", "tanh"]')
-
     def forward(self, x):
         for hidden_layer in self.hidden_layers:
             x = hidden_layer.forward(x)
@@ -52,6 +44,27 @@ class FullyConnectedClassifier:
         logits = self.classification_layer.forward(x)
         probs = torch.softmax(logits, dim=-1)
         return probs
+
+    def predict(self, x):
+        probs = self.forward(x)
+        pred_labels = probs.argmax(dim=1)
+        return pred_labels
+
+    def trainable_params(self):
+        params = []
+        layers = self.hidden_layers + [self.classification_layer]
+        for layer in layers:
+            _params = layer.trainable_params()
+            params.extend(_params)
+        return params
+
+    def __choose_activation_func(self, activation: str):
+        if activation.lower() == "relu":
+            self.activation = torch.relu
+        elif activation.lower() == "tanh":
+            self.activation = torch.tanh
+        else:
+            raise ValueError('activation should be one of ["relu", "tanh"]')
 
 
 class FullyConnectedLayer:
@@ -72,6 +85,12 @@ class FullyConnectedLayer:
         if self.with_bias:
             res = res + self.b
         return res
+
+    def trainable_params(self):
+        params = [self.W]
+        if self.with_bias:
+            params.append(self.b)
+        return params
 
     def __choose_init_func(self, init_type: str, init_gaussian_std: float):
         if init_type.lower() == "gaussian":

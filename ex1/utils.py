@@ -90,3 +90,16 @@ def shuffle_multiple_arrays(*arrays: NDArray, seed: int = None
     perm = random_state.permutation(length)
     shuf_arrays = tuple([x[perm] for x in arrays])
     return shuf_arrays
+
+
+def batchify(X: NDArray,
+             y: NDArray,
+             batch_size: int,
+             seed: int = None
+             ) -> List[Tuple[NDArray, NDArray]]:
+    X, y = shuffle_multiple_arrays(X, y, seed=seed)
+    num_batches = np.ceil(len(X) / batch_size)
+    X_batches = np.array_split(X, num_batches)
+    y_batches = np.array_split(y, num_batches)
+    batches = list(zip(X_batches, y_batches))
+    return batches

@@ -16,6 +16,7 @@ import os.path as osp
 
 import torch
 from sklearn.svm import SVC
+from fully_connected import FullyConnectedClassifier
 
 from cifar_loader import load_cifar_dataset
 from utils import shuffle_multiple_arrays, fit_and_save, eval_and_plot
@@ -74,6 +75,10 @@ eval_and_plot(model, X_test, y_test,
 
 # ## Playing around with PyTorch low level api
 
+import torch
+import numpy as np
+
+seed = 34
 torch.manual_seed(seed)
 np_state = np.random.RandomState(seed)
 
@@ -124,5 +129,57 @@ print("pytorch:", torch.nn.BCELoss()(p, y).item())
 print("mine:   ", loss.item())
 
 
+# ## Training a fully connected net
 
+hidden_size = 256
+num_hidden_layers = 2
+activation = "tanh"
+init_type = "gaussian"
+init_gaussian_std = 0.05
+
+net = FullyConnectedClassifier(num_classes=len(class_names),
+                               input_size=X_train.shape[1],
+                               hidden_size=hidden_size,
+                               num_hidden_layers=num_hidden_layers,
+                               activation=activation,
+                               init_type=init_type,
+                               init_gaussian_std=init_gaussian_std)
+
+optimizer = torch.optim.Adam(net.trainable_params(), lr=0.001)
+
+
+
+from utils import batchify
+from losses import cross_entropy_loss
+
+
+epochs = 10
+batch_size = 32
+
+for epoch in range(epochs):
+    epoch_seed = seed + epoch
+    batches = batchify(X_train, y_train, batch_size, seed=epoch_seed)
+    
+    num_batches = len(batches)
+    epoch_loss = 0.
+    for i_batch, (X_batch, y_batch) in enumerate(batches):
+        # forward
+        X_batch = torch.FloatTensor(X_batch)
+        y_batch = torch.LongTensor(y_batch)
+        probs = net.forward(X_batch)
+        loss = cross_entropy_loss(probs, y_batch)
+        
+        # gradient step
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        
+        epoch_loss += loss.item()
+    
+    epoch_loss /= num_batches
+    
+    # report progress
+    pred_labels = net.predict(torch.FloatTensor(X_train)).data.numpy()
+    accuracy = (pred_labels == y_train).mean()
+    print(f"epoch {epoch+1}/{epochs}   loss: {epoch_loss:.3f}   accuracy: {accuracy:.2f}")
 
