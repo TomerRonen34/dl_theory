@@ -1,6 +1,8 @@
 import numpy as np
 import pickle
+import os
 import os.path as osp
+from utils import shuffle_multiple_arrays
 from typing import *
 from nptyping import *
 
@@ -16,6 +18,58 @@ def load_cifar_dataset(dataset_dir: str
     test_images, test_labels = _load_batch(test_path)
     class_names = _load_class_names(meta_path)
     return train_images, train_labels, test_images, test_labels, class_names
+
+
+def prepare_cifar_data_for_vector_classifier(dataset_dir: str,
+                                             cache_dir: str,
+                                             subsample_fraction: float = 0.1,
+                                             seed: int = 34):
+    if cache_dir is None:
+        return _prepare_for_vector_classifier(dataset_dir, subsample_fraction, seed)
+
+    os.makedirs(cache_dir, exist_ok=True)
+
+    if subsample_fraction is None:
+        data_dump_path = osp.join(
+            cache_dir, f"cifar_vectors_seed_{seed}.npz")
+    else:
+        data_dump_path = osp.join(
+            cache_dir, f"cifar_vectors_subsample_{subsample_fraction:.2f}_seed_{seed}.npz")
+
+    if not osp.exists(data_dump_path):
+        X_train, y_train, X_test, y_test, class_names = (
+            _prepare_for_vector_classifier(dataset_dir, subsample_fraction, seed))
+        np.savez(data_dump_path, X_train=X_train, y_train=y_train,
+                 X_test=X_test, y_test=y_test, class_names=class_names)
+    else:
+        npzfile = np.load(data_dump_path)
+        X_train, y_train, X_test, y_test, class_names = (
+            npzfile["X_train"], npzfile["y_train"],
+            npzfile["X_test"], npzfile["y_test"], npzfile["class_names"])
+
+    return X_train, y_train, X_test, y_test, class_names
+
+
+def _prepare_for_vector_classifier(dataset_dir: str,
+                                   subsample_fraction: float = None,
+                                   seed: int = 34):
+    orig_train_images, orig_train_labels, orig_test_images, orig_test_labels, class_names = (
+        load_cifar_dataset(dataset_dir))
+    train_images, train_labels = shuffle_multiple_arrays(orig_train_images, orig_train_labels, seed=seed)
+    test_images, test_labels = shuffle_multiple_arrays(orig_test_images, orig_test_labels, seed=seed)
+
+    X_train = train_images.reshape(len(train_images), -1)
+    X_test = test_images.reshape(len(test_images), -1)
+    y_train = train_labels
+    y_test = test_labels
+
+    if subsample_fraction is not None:
+        num_train = int(len(X_train) * subsample_fraction)
+        num_test = int(len(X_test) * subsample_fraction)
+        X_train, y_train, X_test, y_test = (
+            X_train[:num_train], y_train[:num_train], X_test[:num_test], y_test[:num_test])
+
+    return X_train, y_train, X_test, y_test, class_names
 
 
 def _generate_paths(dataset_dir: str
