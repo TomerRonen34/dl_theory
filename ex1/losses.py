@@ -16,7 +16,13 @@ def cross_entropy_loss(probs, targets):
     return loss
 
 
-def test_cross_entropy_loss():
+def MSE_loss(preds, targets):
+    loss = (preds - targets) ** 2
+    loss = loss.mean()
+    return loss
+
+
+def _test_cross_entropy_loss():
     num_samples = 1000
     num_classes = 10
 
@@ -33,5 +39,20 @@ def test_cross_entropy_loss():
         print("test_cross_entropy_loss:  Failure")
 
 
+def _test_MSE_loss():
+    n = 1000
+    preds = torch.rand(n)
+    targets = torch.rand(n)
+
+    torch_loss = torch.nn.MSELoss()(preds, targets)
+    my_loss = MSE_loss(preds, targets)
+
+    if torch.allclose(torch_loss, my_loss):
+        print("test_MSE_loss:  Success!")
+    else:
+        print("test_MSE_loss:  Failure")
+
+
 if __name__ == '__main__':
-    test_cross_entropy_loss()
+    _test_cross_entropy_loss()
+    _test_MSE_loss()

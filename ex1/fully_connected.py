@@ -13,7 +13,7 @@ class FullyConnectedClassifier:
                  init_type: str = "gaussian",
                  init_gaussian_std: float = 0.05):
         """
-        activation: one of ["relu", "tanh"]
+        activation: one of ["relu", "tanh", "identity"]
         init_type: one of ["gaussian", "xavier"]
         init_gaussian_std: ignored if init_type == "xavier"
         """
@@ -63,8 +63,10 @@ class FullyConnectedClassifier:
             self.activation = torch.relu
         elif activation.lower() == "tanh":
             self.activation = torch.tanh
+        elif activation.lower() == "identity":
+            self.activation = lambda x: x
         else:
-            raise ValueError('activation should be one of ["relu", "tanh"]')
+            raise ValueError('activation should be one of ["relu", "tanh", "identity"]')
 
 
 class FullyConnectedLayer:
