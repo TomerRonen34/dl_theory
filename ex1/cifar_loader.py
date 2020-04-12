@@ -58,8 +58,8 @@ def _prepare_for_vector_classifier(dataset_dir: str,
     train_images, train_labels = shuffle_multiple_arrays(orig_train_images, orig_train_labels, seed=seed)
     test_images, test_labels = shuffle_multiple_arrays(orig_test_images, orig_test_labels, seed=seed)
 
-    X_train = train_images.reshape(len(train_images), -1)
-    X_test = test_images.reshape(len(test_images), -1)
+    X_train = train_images.reshape(len(train_images), -1) / 255.
+    X_test = test_images.reshape(len(test_images), -1) / 255.
     y_train = train_labels
     y_test = test_labels
 
