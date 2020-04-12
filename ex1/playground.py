@@ -49,7 +49,7 @@ num_hidden_layers = 1
 activation = "relu"
 init_type = "gaussian"
 init_gaussian_std = 0.001
-epochs = 50
+epochs = 30
 batch_size = 32
 learning_rate = 0.0001
 
@@ -64,7 +64,5 @@ net = FullyConnectedClassifier(num_classes=len(class_names),
 optimizer = torch.optim.SGD(net.trainable_params(), lr=learning_rate)
 
 fit_classifier(net, optimizer, X_train, y_train, epochs, batch_size, seed,
-               report_progress=True,
                X_test=X_test,
-               y_test=y_test,
-               print_gradient_amplitudes=False)
+               y_test=y_test)
