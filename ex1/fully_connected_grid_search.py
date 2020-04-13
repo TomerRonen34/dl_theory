@@ -8,7 +8,7 @@ from cifar_loader import prepare_cifar_data_for_vector_classifier
 from training import fit_classifier
 
 
-def train_models():
+def grid_search():
     save_dir = osp.join("models", "fully_connected")
     dataset_dir = "cifar-10-batches-py"
     cache_dir = "data_cache"
@@ -35,22 +35,49 @@ def train_models():
                 model_name = f"fully_connected_{i_model}"
                 train_and_eval_fully_connected_model(X_train, y_train, X_test, y_test, class_names,
                                                      save_dir, model_name,
-                                                     init_gaussian_std, learning_rate, momentum)
+                                                     init_gaussian_std=init_gaussian_std,
+                                                     learning_rate=learning_rate,
+                                                     momentum=momentum)
                 i_model += 1
+
+
+def compare_inits():
+    save_dir = osp.join("models", "fully_connected_compare_inits")
+    dataset_dir = "cifar-10-batches-py"
+    cache_dir = "data_cache"
+
+    subsample_fraction = 0.1
+    init_gaussian_std = 0.001
+    learning_rate = 0.001
+    momentum = 0.9
+
+    X_train, y_train, X_test, y_test, class_names = (
+        prepare_cifar_data_for_vector_classifier(dataset_dir,
+                                                 cache_dir,
+                                                 subsample_fraction))
+
+    for init_type in ["xavier", "gaussian"]:
+        model_name = f"fully_connected_{init_type}"
+        train_and_eval_fully_connected_model(X_train, y_train, X_test, y_test, class_names,
+                                             save_dir, model_name,
+                                             init_gaussian_std=init_gaussian_std,
+                                             learning_rate=learning_rate,
+                                             momentum=momentum,
+                                             init_type=init_type)
 
 
 def train_and_eval_fully_connected_model(X_train, y_train, X_test, y_test, class_names,
                                          save_dir, model_name,
-                                         init_gaussian_std, learning_rate, momentum):
-    epochs = 100
+                                         init_gaussian_std, learning_rate, momentum,
+                                         epochs=100,
+                                         hidden_size=256,
+                                         num_hidden_layers=1,
+                                         activation="relu",
+                                         init_type="gaussian",
+                                         batch_size=32,
+                                         seed=34):
     num_classes = len(class_names)
     input_size = X_train.shape[1]
-    hidden_size = 256
-    num_hidden_layers = 1
-    activation = "relu"
-    init_type = "gaussian"
-    batch_size = 32
-    seed = 34
 
     net = FullyConnectedClassifier(num_classes,
                                    input_size,
@@ -110,4 +137,4 @@ def save_model(net, metrics, hyper_params, model_name, save_dir):
 
 
 if __name__ == '__main__':
-    train_models()
+    compare_inits()

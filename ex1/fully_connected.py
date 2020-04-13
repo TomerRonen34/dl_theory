@@ -1,6 +1,6 @@
 import torch
 from torch.autograd import Variable
-from initializers import gaussian_init
+from initializers import gaussian_init, xavier_init
 from functools import partial
 
 
@@ -99,7 +99,7 @@ class FullyConnectedLayer:
                 raise ValueError("init_gaussian_std can't be None when using gaussian initialization")
             self.init_func = partial(gaussian_init, std=init_gaussian_std, mean=0.)
         elif init_type.lower() == "xavier":
-            raise NotImplementedError
+            self.init_func = xavier_init
         else:
             raise ValueError('init_type should be one of ["gaussian", "xavier"]')
 

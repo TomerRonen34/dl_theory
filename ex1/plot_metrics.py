@@ -5,6 +5,7 @@ from glob import glob
 from typing import *
 import matplotlib.pyplot as plt
 from itertools import cycle
+import numpy as np
 
 
 def plot_metrics(models_dir: str,
@@ -96,7 +97,7 @@ def _plot_several(
         to_plot: Dict[str, List[float]],
         title: str,
         save_path: str = None):
-    line_styles_iter = _line_styles_iter()
+    line_styles_iter = _line_styles_iter(num_styles=len(to_plot))
 
     W, H = plt.rcParamsDefault["figure.figsize"]
     plt.figure(figsize=(2.5 * W, 2.5 * H))
@@ -104,19 +105,26 @@ def _plot_several(
     plt.xlabel("epoch")
     for name, values in to_plot.items():
         color, line_shape, marker_style = next(line_styles_iter)
-        line, = plt.plot(values, color + line_shape + marker_style,
+        epochs = list(range(1, len(values) + 1))
+        line, = plt.plot(epochs, values, color + line_shape + marker_style,
                          markevery=int(len(values) / 10), markersize=5)
         line.set_label(name)
-    plt.legend(loc="upper left", bbox_to_anchor=(1, 1), ncol=3)
+    plt.legend(loc="upper left", bbox_to_anchor=(1, 1),
+               ncol=int(np.ceil(len(to_plot) / 9)))
 
     if save_path is not None:
         plt.savefig(save_path, bbox_inches="tight")
 
 
-def _line_styles_iter():
+def _line_styles_iter(num_styles: int):
     colors = ['b', 'g', 'r']
-    line_shapes = ['-', '--', ':']
-    marker_styles = ['o', 's', '^']
+    line_shapes = ['']
+    marker_styles = ['']
+    if num_styles > 3:
+        line_shapes = ['-', '--', ':']
+    if num_styles > 9:
+        marker_styles = ['o', 's', '^']
+
     lines_styles_iter = cycle([(color, line_shape, marker_style)
                                for color in colors
                                for line_shape in line_shapes
@@ -125,5 +133,7 @@ def _line_styles_iter():
 
 
 if __name__ == '__main__':
-    plot_metrics(models_dir=r"models\fully_connected",
-                 hyper_param_names_for_label=["momentum", "learning_rate", "init_gaussian_std"])
+    # plot_metrics(models_dir=r"models\fully_connected",
+    #              hyper_param_names_for_label=["momentum", "learning_rate", "init_gaussian_std"])
+    plot_metrics(models_dir=r"models\fully_connected_compare_inits",
+                 hyper_param_names_for_label=["init_type"])
