@@ -8,7 +8,7 @@ from cifar_loader import prepare_cifar_data_for_vector_classifier
 from training import fit_classifier
 
 
-def main():
+def train_models():
     save_dir = osp.join("models", "fully_connected")
     dataset_dir = "cifar-10-batches-py"
     cache_dir = "data_cache"
@@ -29,7 +29,9 @@ def main():
     for init_gaussian_std in grid_init_gaussian_std:
         for learning_rate in grid_learning_rate:
             for momentum in grid_momentum:
-                print(f"model {i_model}/{num_models}")
+                print(f"\nmodel {i_model}/{num_models}")
+                print(f"init_gaussian_std: {init_gaussian_std}  learning_rate: {learning_rate}"
+                      f"  momentum: {momentum}")
                 model_name = f"fully_connected_{i_model}"
                 train_and_eval_fully_connected_model(X_train, y_train, X_test, y_test, class_names,
                                                      save_dir, model_name,
@@ -40,7 +42,7 @@ def main():
 def train_and_eval_fully_connected_model(X_train, y_train, X_test, y_test, class_names,
                                          save_dir, model_name,
                                          init_gaussian_std, learning_rate, momentum):
-    epochs = 5
+    epochs = 30
     num_classes = len(class_names)
     input_size = X_train.shape[1]
     hidden_size = 256
@@ -108,4 +110,4 @@ def save_model(net, metrics, hyper_params, model_name, save_dir):
 
 
 if __name__ == '__main__':
-    main()
+    train_models()

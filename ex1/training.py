@@ -1,9 +1,6 @@
 import torch
 from utils import batchify
 from losses import cross_entropy_loss
-from itertools import cycle
-from typing import *
-import matplotlib.pyplot as plt
 
 
 def fit_classifier(net,
@@ -67,22 +64,3 @@ def fit_classifier(net,
         print(report)
 
     return metrics
-
-
-def plot_several(to_plot: Dict[str, List], title: str):
-    colors = cycle(['b', 'g', 'r', 'c', 'm', 'k'])
-    plt.figure()
-    plt.title(title)
-    for name, values in to_plot.items():
-        line, = plt.plot(values, color=next(colors))
-        line.set_label(name)
-    plt.legend()
-    plt.show()
-
-
-def plot_fit_metrics(metrics: Dict[str, List]):
-    accuracies = {name: values for name, values in metrics.items() if "acc" in name}
-    other_metrics = {name: values for name, values in metrics.items() if "acc" not in name}
-    plot_several(to_plot=accuracies, title="Accuracy")
-    for name, values in other_metrics.items():
-        plot_several(to_plot={name: values}, title=name)
