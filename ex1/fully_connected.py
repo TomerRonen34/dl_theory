@@ -12,31 +12,38 @@ class FullyConnectedClassifier:
                  num_hidden_layers: int,
                  activation: str = "relu",
                  init_type: str = "gaussian",
-                 init_gaussian_std: float = 0.05):
+                 init_gaussian_std: float = 0.001,
+                 dropout_drop_probability: float = 0.):
         """
         activation: one of ["relu", "tanh"]
         init_type: one of ["gaussian", "xavier"]
-        init_gaussian_std: ignored if init_type == "xavier"
+        init_gaussian_std: ignored if init_type != "gaussian"
         """
+        self.phase = "train"
         self.__choose_activation_func(activation)
         self.classification_layer = FullyConnectedLayer(input_size=hidden_size,
                                                         output_size=num_classes,
                                                         with_bias=True,
                                                         init_type=init_type,
-                                                        init_gaussian_std=init_gaussian_std)
+                                                        init_gaussian_std=init_gaussian_std,
+                                                        dropout_drop_probability=dropout_drop_probability)
         first_hidden_layer = FullyConnectedLayer(input_size=input_size,
                                                  output_size=hidden_size,
                                                  with_bias=True,
                                                  init_type=init_type,
-                                                 init_gaussian_std=init_gaussian_std)
+                                                 init_gaussian_std=init_gaussian_std,
+                                                 dropout_drop_probability=dropout_drop_probability)
         self.hidden_layers = [first_hidden_layer]
         if num_hidden_layers > 1:
             intermediate_hidden_layer = FullyConnectedLayer(input_size=hidden_size,
                                                             output_size=hidden_size,
                                                             with_bias=True,
                                                             init_type=init_type,
-                                                            init_gaussian_std=init_gaussian_std)
+                                                            init_gaussian_std=init_gaussian_std,
+                                                            dropout_drop_probability=dropout_drop_probability)
             self.hidden_layers.append(intermediate_hidden_layer)
+
+        self.layers = self.hidden_layers + [self.classification_layer]
 
     def forward(self, x):
         for hidden_layer in self.hidden_layers:
@@ -47,17 +54,28 @@ class FullyConnectedClassifier:
         return probs
 
     def predict(self, x):
-        probs = self.forward(x)
+        probs = self.predict_proba(x)
         pred_labels = probs.argmax(dim=1)
         return pred_labels
 
+    def predict_proba(self, x):
+        phase = self.phase
+        self.set_phase("eval")
+        probs = self.forward(x)
+        self.set_phase(phase)
+        return probs
+
     def trainable_params(self):
         params = []
-        layers = self.hidden_layers + [self.classification_layer]
-        for layer in layers:
+        for layer in self.layers:
             _params = layer.trainable_params()
             params.extend(_params)
         return params
+
+    def set_phase(self, phase: str):
+        self.phase = phase
+        for layer in self.layers:
+            layer.set_phase(phase)
 
     def __choose_activation_func(self, activation: str):
         if activation.lower() == "relu":
@@ -74,17 +92,24 @@ class FullyConnectedLayer:
                  output_size: int,
                  with_bias: bool,
                  init_type: str,
-                 init_gaussian_std: float = None):
+                 init_gaussian_std: float = None,
+                 dropout_drop_probability: float = 0.):
+        self.phase = "train"
         self.with_bias = with_bias
         self.__choose_init_func(init_type, init_gaussian_std)
         self.W = Variable(self.init_func((input_size, output_size)), requires_grad=True)
         if self.with_bias:
             self.b = Variable(torch.zeros(1, output_size), requires_grad=True)
+        self.dropout = None
+        if dropout_drop_probability != 0.:
+            self.dropout = Dropout(dropout_drop_probability)
 
     def forward(self, x):
         res = torch.matmul(x, self.W)
         if self.with_bias:
             res = res + self.b
+        if self.dropout is not None:
+            res = self.dropout.forward(res)
         return res
 
     def trainable_params(self):
@@ -92,6 +117,11 @@ class FullyConnectedLayer:
         if self.with_bias:
             params.append(self.b)
         return params
+
+    def set_phase(self, phase: str):
+        self.phase = phase
+        if self.dropout is not None:
+            self.dropout.set_phase(phase)
 
     def __choose_init_func(self, init_type: str, init_gaussian_std: float):
         if init_type.lower() == "gaussian":
@@ -102,6 +132,24 @@ class FullyConnectedLayer:
             self.init_func = xavier_init
         else:
             raise ValueError('init_type should be one of ["gaussian", "xavier"]')
+
+
+class Dropout:
+    def __init__(self, drop_probability: float):
+        self.phase = "train"
+        self.drop_probability = drop_probability
+
+    def forward(self, x):
+        if self.phase == "train":
+            drop_mask = torch.rand_like(x) < self.drop_probability
+            res = torch.where(drop_mask, torch.Tensor([0.]), x)
+            res /= 1 - self.drop_probability
+            return res
+        else:
+            return x
+
+    def set_phase(self, phase: str):
+        self.phase = phase
 
 
 def _example():

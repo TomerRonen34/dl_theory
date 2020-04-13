@@ -9,9 +9,10 @@ import numpy as np
 
 
 def plot_metrics(models_dir: str,
-                 hyper_param_names_for_label: List[str]):
+                 hyper_param_names_for_label: List[str],
+                 force_alternating_styles: bool = False):
     metrics_per_model = _gather_metrics(models_dir, hyper_param_names_for_label)
-    _plot_metrics_by_type(metrics_per_model, models_dir)
+    _plot_metrics_by_type(metrics_per_model, models_dir, force_alternating_styles)
 
 
 def _gather_metrics(models_dir: str,
@@ -57,13 +58,17 @@ def _load_metrics(metrics_file: str):
 
 
 def _plot_metrics_by_type(metrics_per_model,
-                          models_dir: str):
+                          models_dir: str,
+                          force_alternating_styles: bool):
     metrics_by_type = _rearrange_metrics_by_type(metrics_per_model)
     for metric_name, specific_metric_per_model in metrics_by_type.items():
         figures_dir = osp.join(models_dir, "figures")
         os.makedirs(figures_dir, exist_ok=True)
         save_path = osp.join(figures_dir, metric_name + ".png")
-        _plot_several(specific_metric_per_model, title=metric_name, save_path=save_path)
+        _plot_several(to_plot=specific_metric_per_model,
+                      title=metric_name,
+                      save_path=save_path,
+                      force_alternating_styles=force_alternating_styles)
 
 
 def _rearrange_metrics_by_type(metrics_per_model):
@@ -96,8 +101,10 @@ def _extract_specific_metric(metrics_per_model,
 def _plot_several(
         to_plot: Dict[str, List[float]],
         title: str,
-        save_path: str = None):
-    line_styles_iter = _line_styles_iter(num_styles=len(to_plot))
+        save_path: str,
+        force_alternating_styles: bool):
+    line_styles_iter = _line_styles_iter(num_styles=len(to_plot),
+                                         force_alternating_styles=force_alternating_styles)
 
     W, H = plt.rcParamsDefault["figure.figsize"]
     plt.figure(figsize=(2.5 * W, 2.5 * H))
@@ -107,7 +114,7 @@ def _plot_several(
         color, line_shape, marker_style = next(line_styles_iter)
         epochs = list(range(1, len(values) + 1))
         line, = plt.plot(epochs, values, color + line_shape + marker_style,
-                         markevery=int(len(values) / 10), markersize=5)
+                         markevery=int(np.ceil(len(values) / 10)), markersize=5)
         line.set_label(name)
     plt.legend(loc="upper left", bbox_to_anchor=(1, 1),
                ncol=int(np.ceil(len(to_plot) / 9)))
@@ -116,11 +123,12 @@ def _plot_several(
         plt.savefig(save_path, bbox_inches="tight")
 
 
-def _line_styles_iter(num_styles: int):
+def _line_styles_iter(num_styles: int,
+                      force_alternating_styles: bool):
     colors = ['b', 'g', 'r']
     line_shapes = ['']
     marker_styles = ['']
-    if num_styles <= 6:
+    if num_styles <= 6 and not force_alternating_styles:
         colors += ['m', 'c', 'k']
     else:
         colors = ['b', 'g', 'r']
@@ -136,9 +144,12 @@ def _line_styles_iter(num_styles: int):
 
 
 if __name__ == '__main__':
-    # plot_metrics(models_dir=r"models\fully_connected",
+    # plot_metrics(models_dir=r"models\fully_connected\grid_search",
     #              hyper_param_names_for_label=["momentum", "learning_rate", "init_gaussian_std"])
-    # plot_metrics(models_dir=r"models\fully_connected_compare_inits",
+    # plot_metrics(models_dir=r"models\fully_connected\inits",
     #              hyper_param_names_for_label=["init_type"])
-    plot_metrics(models_dir=r"models\fully_connected_PCA",
-                 hyper_param_names_for_label=["model_name"])
+    # plot_metrics(models_dir=r"models\fully_connected\PCA",
+    #              hyper_param_names_for_label=["model_name"])
+    plot_metrics(models_dir=r"models\fully_connected\regularization",
+                 hyper_param_names_for_label=["weight_decay", "dropout_drop_probability"],
+                 force_alternating_styles=True)
