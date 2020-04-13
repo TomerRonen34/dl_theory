@@ -42,7 +42,7 @@ def train_models():
 def train_and_eval_fully_connected_model(X_train, y_train, X_test, y_test, class_names,
                                          save_dir, model_name,
                                          init_gaussian_std, learning_rate, momentum):
-    epochs = 30
+    epochs = 100
     num_classes = len(class_names)
     input_size = X_train.shape[1]
     hidden_size = 256

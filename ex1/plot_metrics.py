@@ -96,27 +96,34 @@ def _plot_several(
         to_plot: Dict[str, List[float]],
         title: str,
         save_path: str = None):
-    line_styles = _line_style_iterator()
+    line_styles_iter = _line_styles_iter()
 
-    plt.figure()
+    W, H = plt.rcParamsDefault["figure.figsize"]
+    plt.figure(figsize=(2.5 * W, 2.5 * H))
     plt.title(title)
+    plt.xlabel("epoch")
     for name, values in to_plot.items():
-        line, = plt.plot(values, next(line_styles))
+        color, line_shape, marker_style = next(line_styles_iter)
+        line, = plt.plot(values, color + line_shape + marker_style,
+                         markevery=int(len(values) / 10), markersize=5)
         line.set_label(name)
-    plt.legend(loc="upper left", bbox_to_anchor=(1, 1))
+    plt.legend(loc="upper left", bbox_to_anchor=(1, 1), ncol=3)
 
     if save_path is not None:
         plt.savefig(save_path, bbox_inches="tight")
 
 
-def _line_style_iterator():
-    colors = ['b', 'g', 'r', 'c', 'm', 'k']
-    line_shapes = ["-", "--", ":"]
-    line_styles = [color + shape for color in colors for shape in line_shapes]
-    line_styles = cycle(line_styles)
-    return line_styles
+def _line_styles_iter():
+    colors = ['b', 'g', 'r']
+    line_shapes = ['-', '--', ':']
+    marker_styles = ['o', 's', '^']
+    lines_styles_iter = cycle([(color, line_shape, marker_style)
+                               for color in colors
+                               for line_shape in line_shapes
+                               for marker_style in marker_styles])
+    return lines_styles_iter
 
 
 if __name__ == '__main__':
     plot_metrics(models_dir=r"models\fully_connected",
-                 hyper_param_names_for_label=["init_gaussian_std", "learning_rate", "momentum"])
+                 hyper_param_names_for_label=["momentum", "learning_rate", "init_gaussian_std"])
