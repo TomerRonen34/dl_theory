@@ -1,6 +1,62 @@
-import torch
 from utils import batchify
 from losses import cross_entropy_loss
+import os
+import os.path as osp
+import torch
+import pickle
+import json
+from fully_connected import FullyConnectedClassifier
+
+
+def train_and_eval_fully_connected_model(X_train, y_train, X_test, y_test, class_names, save_dir, model_name,
+                                         learning_rate=0.001, momentum=0.9, init_type="xavier", init_gaussian_std=0.001,
+                                         hidden_size=256, num_hidden_layers=1, activation="relu", epochs=100,
+                                         batch_size=32, seed=34):
+    num_classes = len(class_names)
+    input_size = X_train.shape[1]
+
+    net = FullyConnectedClassifier(num_classes,
+                                   input_size,
+                                   hidden_size,
+                                   num_hidden_layers,
+                                   activation,
+                                   init_type,
+                                   init_gaussian_std)
+
+    optimizer = torch.optim.SGD(net.trainable_params(),
+                                lr=learning_rate,
+                                momentum=momentum)
+
+    metrics = fit_classifier(net,
+                             optimizer,
+                             X_train,
+                             y_train,
+                             epochs,
+                             batch_size,
+                             seed,
+                             X_test,
+                             y_test)
+
+    hyper_params = dict(
+        model_name=model_name,
+        init_gaussian_std=init_gaussian_std,
+        learning_rate=learning_rate,
+        momentum=momentum,
+        epochs=epochs,
+        num_classes=num_classes,
+        input_size=input_size,
+        hidden_size=hidden_size,
+        num_hidden_layers=num_hidden_layers,
+        activation=activation,
+        init_type=init_type,
+        batch_size=batch_size,
+        seed=seed)
+
+    save_model(net,
+               metrics,
+               hyper_params,
+               model_name,
+               save_dir)
 
 
 def fit_classifier(net,
@@ -64,3 +120,17 @@ def fit_classifier(net,
         print(report)
 
     return metrics
+
+
+def save_model(net, metrics, hyper_params, model_name, save_dir):
+    model_dir = osp.join(save_dir, model_name)
+    os.makedirs(model_dir, exist_ok=True)
+
+    with open(osp.join(model_dir, "net.pkl"), 'wb') as f:
+        pickle.dump(net, f)
+
+    with open(osp.join(model_dir, "metrics.json"), 'w') as f:
+        json.dump(metrics, f, indent=2)
+
+    with open(osp.join(model_dir, "hyper_params.json"), 'w') as f:
+        json.dump(hyper_params, f, indent=2)

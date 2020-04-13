@@ -120,10 +120,13 @@ def _line_styles_iter(num_styles: int):
     colors = ['b', 'g', 'r']
     line_shapes = ['']
     marker_styles = ['']
-    if num_styles > 3:
+    if num_styles <= 6:
+        colors += ['m', 'c', 'k']
+    else:
+        colors = ['b', 'g', 'r']
         line_shapes = ['-', '--', ':']
-    if num_styles > 9:
-        marker_styles = ['o', 's', '^']
+        if num_styles > 9:
+            marker_styles = ['o', 's', '^']
 
     lines_styles_iter = cycle([(color, line_shape, marker_style)
                                for color in colors
@@ -135,5 +138,7 @@ def _line_styles_iter(num_styles: int):
 if __name__ == '__main__':
     # plot_metrics(models_dir=r"models\fully_connected",
     #              hyper_param_names_for_label=["momentum", "learning_rate", "init_gaussian_std"])
-    plot_metrics(models_dir=r"models\fully_connected_compare_inits",
-                 hyper_param_names_for_label=["init_type"])
+    # plot_metrics(models_dir=r"models\fully_connected_compare_inits",
+    #              hyper_param_names_for_label=["init_type"])
+    plot_metrics(models_dir=r"models\fully_connected_PCA",
+                 hyper_param_names_for_label=["model_name"])
