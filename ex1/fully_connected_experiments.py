@@ -136,5 +136,32 @@ def width():
                  hyper_param_names_for_label=["hidden_size"])
 
 
+def depth():
+    save_dir = osp.join("models", "fully_connected", "depth")
+    dataset_dir = "cifar-10-batches-py"
+    cache_dir = "data_cache"
+    subsample_fraction = 0.1
+
+    X_train, y_train, X_test, y_test, class_names = (
+        prepare_cifar_data_for_vector_classifier(dataset_dir,
+                                                 cache_dir,
+                                                 subsample_fraction))
+
+    epochs = 100
+    hidden_size = 64
+    for num_hidden_layers in [1, 2, 3, 9]:
+        model_name = f"depth_{num_hidden_layers}"
+        print('\n', model_name, '\n', '=' * len(model_name))
+        train_and_eval_fully_connected_model(X_train, y_train, X_test, y_test,
+                                             class_names, save_dir, model_name,
+                                             num_hidden_layers=num_hidden_layers,
+                                             hidden_size=hidden_size,
+                                             epochs=epochs)
+
+    plot_metrics(models_dir=save_dir,
+                 hyper_param_names_for_label=["num_hidden_layers"])
+
+
 if __name__ == '__main__':
-    width()
+    depth()
+    print('\n', "Done")
