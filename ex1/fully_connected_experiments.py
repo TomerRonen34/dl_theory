@@ -97,8 +97,8 @@ def regularization():
                                                  subsample_fraction))
 
     epochs = 100
-    for weight_decay in [0., 0.1, 0.001]:
-        for dropout_drop_probability in [0., 0.3, 0.5]:
+    for weight_decay in [0., 0.1, 0.05, 0.01, 0.001]:
+        for dropout_drop_probability in [0., 0.3, 0.5, 0.8]:
             model_name = f"decay_{weight_decay}_dropout_{dropout_drop_probability}"
             print('\n', model_name, '\n', '=' * len(model_name))
             train_and_eval_fully_connected_model(X_train, y_train, X_test, y_test,
@@ -108,8 +108,7 @@ def regularization():
                                                  epochs=epochs)
 
     plot_metrics(models_dir=save_dir,
-                 hyper_param_names_for_label=["dropout_drop_probability", "weight_decay"],
-                 force_alternating_styles=True)
+                 hyper_param_names_for_label=["dropout_drop_probability", "weight_decay"])
 
 
 if __name__ == '__main__':

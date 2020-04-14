@@ -9,10 +9,9 @@ import numpy as np
 
 
 def plot_metrics(models_dir: str,
-                 hyper_param_names_for_label: List[str],
-                 force_alternating_styles: bool = False):
+                 hyper_param_names_for_label: List[str]):
     metrics_per_model = _gather_metrics(models_dir, hyper_param_names_for_label)
-    _plot_metrics_by_type(metrics_per_model, models_dir, force_alternating_styles)
+    _plot_metrics_by_type(metrics_per_model, models_dir)
 
 
 def _gather_metrics(models_dir: str,
@@ -23,10 +22,9 @@ def _gather_metrics(models_dir: str,
     metrics_per_model = {}
     metric_files = _find_metric_files(models_dir)
     for metrics_file in metric_files:
-        hyper_param_file = _find_matching_hyper_param_file(metrics_file)
-        model_label = _build_model_label(hyper_param_file, hyper_param_names_for_label)
+        model_key = _build_model_key(metrics_file, hyper_param_names_for_label)
         metrics = _load_metrics(metrics_file)
-        metrics_per_model[model_label] = metrics
+        metrics_per_model[model_key] = metrics
     return metrics_per_model
 
 
@@ -42,13 +40,46 @@ def _find_matching_hyper_param_file(metric_file: str) -> str:
     return hyper_param_file
 
 
-def _build_model_label(hyper_param_file: str,
-                       hyper_param_names_for_label: List[str]):
+def _extract_hyper_params(hyper_param_file: str,
+                          to_extract: List[str]
+                          ) -> Dict[str, Any]:
     with open(hyper_param_file, 'r') as f:
         hyper_params = json.load(f)
-    model_label = '\n'.join([f"{name}={hyper_params[name]}"
-                             for name in hyper_param_names_for_label])
-    return model_label
+    hyper_params = {param_name: hyper_params[param_name] for param_name in to_extract}
+    return hyper_params
+
+
+class _HyperParams:
+    def __init__(self, hyper_params: Dict[str, Any]):
+        self.hyper_params = tuple(hyper_params.items())
+
+    def as_dict(self) -> Dict[str, Any]:
+        return dict(self.hyper_params)
+
+    def build_model_label(self) -> str:
+        hyper_params = self.as_dict()
+        if list(hyper_params.keys()) == ["model_name"]:
+            model_label = hyper_params["model_name"]
+        else:
+            model_label = '\n'.join([f"{param_name}={hyper_params[param_name]}"
+                                     for param_name in hyper_params.keys()])
+        return model_label
+
+    def __hash__(self):
+        return hash(self.hyper_params)
+
+    def __eq__(self, other):
+        return self.hyper_params == other.hyper_params
+
+
+def _build_model_key(metrics_file: str,
+                     hyper_param_names_for_label: List[str]
+                     ) -> _HyperParams:
+    hyper_param_file = _find_matching_hyper_param_file(metrics_file)
+    hyper_params = _extract_hyper_params(hyper_param_file,
+                                         to_extract=hyper_param_names_for_label)
+    model_key = _HyperParams(hyper_params)
+    return model_key
 
 
 def _load_metrics(metrics_file: str):
@@ -58,17 +89,13 @@ def _load_metrics(metrics_file: str):
 
 
 def _plot_metrics_by_type(metrics_per_model,
-                          models_dir: str,
-                          force_alternating_styles: bool):
+                          models_dir: str):
     metrics_by_type = _rearrange_metrics_by_type(metrics_per_model)
     for metric_name, specific_metric_per_model in metrics_by_type.items():
         figures_dir = osp.join(models_dir, "figures")
         os.makedirs(figures_dir, exist_ok=True)
         save_path = osp.join(figures_dir, metric_name + ".png")
-        _plot_several(to_plot=specific_metric_per_model,
-                      title=metric_name,
-                      save_path=save_path,
-                      force_alternating_styles=force_alternating_styles)
+        _plot_metric_per_model(specific_metric_per_model, title=metric_name, save_path=save_path)
 
 
 def _rearrange_metrics_by_type(metrics_per_model):
@@ -92,64 +119,109 @@ def _metric_names(metrics_per_model):
 def _extract_specific_metric(metrics_per_model,
                              metric_name: str):
     specific_metric_per_model = {}
-    for model_label, metrics in sorted(metrics_per_model.items()):
+    for model_key, metrics in metrics_per_model.items():
         if metric_name in metrics.keys():
-            specific_metric_per_model[model_label] = metrics[metric_name]
+            specific_metric_per_model[model_key] = metrics[metric_name]
     return specific_metric_per_model
 
 
-def _plot_several(
-        to_plot: Dict[str, List[float]],
+class _LineStyleChooser:
+    def __init__(self, unique_hyper_params: Dict[str, List[float]]):
+        ordered_param_names = _order_param_names(unique_hyper_params)
+        self._build_line_styles(unique_hyper_params, ordered_param_names)
+        self._build_legend(ordered_param_names)
+
+    def choose(self, model_key: _HyperParams) -> str:
+        line_style = ''
+        for name_and_value in model_key.as_dict().items():
+            line_style += self._name_and_value_to_style[name_and_value]
+        return line_style
+
+    def legend(self):
+        return self._legend
+
+    def _build_legend(self, ordered_param_names: List[str]):
+        element_names = ["color", "line_shape", "marker"]
+        num_elements = min(len(element_names), len(ordered_param_names))
+        legend = ' | '.join([f"{element}: {param}" for param, element in
+                             zip(ordered_param_names[:num_elements], element_names[:num_elements])])
+        self._legend = legend
+
+    @staticmethod
+    def _style_elements():
+        colors = ['b', 'g', 'r', 'm', 'k', 'c']
+        line_shapes = ['-', '--', ':', '-.']
+        markers = ['o', 's', '^', '*']
+        style_elements = [cycle(colors), cycle(line_shapes), cycle(markers)]
+        return style_elements
+
+    def _build_line_styles(self,
+                           unique_hyper_params: Dict[str, List[float]],
+                           ordered_param_names: List[str]):
+        self._name_and_value_to_style = {}
+        style_elements = self._style_elements()
+        for param_name, param_styles in zip(ordered_param_names, style_elements):
+            param_values = unique_hyper_params[param_name]
+            for param_value, param_style in zip(param_values, param_styles):
+                self._name_and_value_to_style[(param_name, param_value)] = param_style
+
+
+def _plot_metric_per_model(
+        metric_per_model: Dict[_HyperParams, List[float]],
         title: str,
-        save_path: str,
-        force_alternating_styles: bool):
-    line_styles_iter = _line_styles_iter(num_styles=len(to_plot),
-                                         force_alternating_styles=force_alternating_styles)
+        save_path: str = None):
+    unique_hyper_params = _unique_hyper_params(metric_per_model)
+    line_style_chooser = _LineStyleChooser(unique_hyper_params)
+    keys_and_styles = [(model_key, line_style_chooser.choose(model_key))
+                       for model_key in metric_per_model.keys()]
+    keys_and_styles = sorted(keys_and_styles, key=lambda tup: tup[1])
 
     W, H = plt.rcParamsDefault["figure.figsize"]
     plt.figure(figsize=(2.5 * W, 2.5 * H))
     plt.title(title)
     plt.xlabel("epoch")
-    for name, values in to_plot.items():
-        color, line_shape, marker_style = next(line_styles_iter)
+    for model_key, line_style in keys_and_styles:
+        values = metric_per_model[model_key]
         epochs = list(range(1, len(values) + 1))
-        line, = plt.plot(epochs, values, color + line_shape + marker_style,
-                         markevery=int(np.ceil(len(values) / 10)), markersize=5)
-        line.set_label(name)
-    plt.legend(loc="upper left", bbox_to_anchor=(1, 1),
-               ncol=int(np.ceil(len(to_plot) / 9)))
+        line, = plt.plot(epochs, values, line_style,
+                         markevery=int(np.ceil(len(values) / 10)), markersize=6)
+        model_label = model_key.build_model_label()
+        line.set_label(model_label)
+
+    num_plots = len(metric_per_model)
+    ncol = 1 if num_plots <= 10 else 3 if num_plots % 3 == 0 else 2
+    legend_title = line_style_chooser.legend()
+    plt.legend(loc="upper left", bbox_to_anchor=(1, 1), ncol=ncol, title=legend_title)
 
     if save_path is not None:
         plt.savefig(save_path, bbox_inches="tight")
 
 
-def _line_styles_iter(num_styles: int,
-                      force_alternating_styles: bool):
-    colors = ['b', 'g', 'r']
-    line_shapes = ['']
-    marker_styles = ['']
-    if num_styles <= 6 and not force_alternating_styles:
-        colors += ['m', 'c', 'k']
-    else:
-        colors = ['b', 'g', 'r']
-        line_shapes = ['-', '--', ':']
-        if num_styles > 9:
-            marker_styles = ['o', 's', '^']
+def _unique_hyper_params(metric_per_model: Dict[_HyperParams, List[float]]
+                         ) -> Dict[str, List[float]]:
+    model_keys = list(metric_per_model.keys())
+    hyper_param_names = list(model_keys[0].as_dict().keys())
+    all_hyper_params = {name: [] for name in hyper_param_names}
+    for model_key in model_keys:
+        for name, value in model_key.as_dict().items():
+            all_hyper_params[name].append(value)
+    unique_hyper_params = {name: list(set(values)) for name, values in all_hyper_params.items()}
+    return unique_hyper_params
 
-    lines_styles_iter = cycle([(color, line_shape, marker_style)
-                               for color in colors
-                               for line_shape in line_shapes
-                               for marker_style in marker_styles])
-    return lines_styles_iter
+
+def _order_param_names(unique_hyper_params: Dict[str, List[float]]) -> List[str]:
+    unique_param_counts = [(name, len(values)) for name, values in unique_hyper_params.items()]
+    ordered_param_counts = sorted(unique_param_counts, key=lambda tup: tup[1], reverse=True)
+    ordered_param_names = [name for name, count in ordered_param_counts]
+    return ordered_param_names
 
 
 if __name__ == '__main__':
-    # plot_metrics(models_dir=r"models\fully_connected\grid_search",
-    #              hyper_param_names_for_label=["momentum", "learning_rate", "init_gaussian_std"])
-    # plot_metrics(models_dir=r"models\fully_connected\inits",
-    #              hyper_param_names_for_label=["init_type"])
-    # plot_metrics(models_dir=r"models\fully_connected\PCA",
-    #              hyper_param_names_for_label=["model_name"])
+    plot_metrics(models_dir=r"models\fully_connected\grid_search",
+                 hyper_param_names_for_label=["momentum", "learning_rate", "init_gaussian_std"])
+    plot_metrics(models_dir=r"models\fully_connected\inits",
+                 hyper_param_names_for_label=["init_type"])
+    plot_metrics(models_dir=r"models\fully_connected\PCA",
+                 hyper_param_names_for_label=["model_name"])
     plot_metrics(models_dir=r"models\fully_connected\regularization",
-                 hyper_param_names_for_label=["weight_decay", "dropout_drop_probability"],
-                 force_alternating_styles=True)
+                 hyper_param_names_for_label=["weight_decay", "dropout_drop_probability"])

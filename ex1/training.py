@@ -6,6 +6,7 @@ import torch
 import pickle
 import json
 from fully_connected import FullyConnectedClassifier
+import numpy as np
 
 
 def train_and_eval_fully_connected_model(X_train, y_train, X_test, y_test, class_names, save_dir, model_name,
@@ -87,6 +88,7 @@ def fit_classifier(net,
         epoch_seed = seed + epoch if seed is not None else None
         batches = batchify(X_train, y_train, batch_size, seed=epoch_seed)
 
+        loss_per_batch = []
         for i_batch, (X_batch, y_batch) in enumerate(batches):
             # forward
             X_batch = torch.FloatTensor(X_batch)
@@ -99,8 +101,10 @@ def fit_classifier(net,
             loss.backward()
             optimizer.step()
 
+            loss_per_batch.append(loss.item())
+
         # metrics & progress report
-        metrics["loss"].append(loss.item())
+        metrics["loss"].append(np.mean(loss_per_batch))
         weights = optimizer.param_groups[0]["params"]
         flat_weights = torch.cat([torch.flatten(x) for x in weights])
         weights_l2 = torch.sqrt(torch.sum(flat_weights ** 2))
