@@ -35,13 +35,14 @@ class FullyConnectedClassifier:
                                                  dropout_drop_probability=dropout_drop_probability)
         self.hidden_layers = [first_hidden_layer]
         if num_hidden_layers > 1:
-            intermediate_hidden_layer = FullyConnectedLayer(input_size=hidden_size,
-                                                            output_size=hidden_size,
-                                                            with_bias=True,
-                                                            init_type=init_type,
-                                                            init_gaussian_std=init_gaussian_std,
-                                                            dropout_drop_probability=dropout_drop_probability)
-            self.hidden_layers.append(intermediate_hidden_layer)
+            for _ in range(num_hidden_layers - 1):
+                intermediate_hidden_layer = FullyConnectedLayer(input_size=hidden_size,
+                                                                output_size=hidden_size,
+                                                                with_bias=True,
+                                                                init_type=init_type,
+                                                                init_gaussian_std=init_gaussian_std,
+                                                                dropout_drop_probability=dropout_drop_probability)
+                self.hidden_layers.append(intermediate_hidden_layer)
 
         self.layers = self.hidden_layers + [self.classification_layer]
 

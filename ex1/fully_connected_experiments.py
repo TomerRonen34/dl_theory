@@ -21,6 +21,7 @@ def grid_search():
                                                  subsample_fraction))
 
     num_models = len(grid_init_gaussian_std) * len(grid_learning_rate) * len(grid_momentum)
+    init_type = "gaussian"
     i_model = 1
 
     for init_gaussian_std in grid_init_gaussian_std:
@@ -30,10 +31,39 @@ def grid_search():
                 print(f"init_gaussian_std: {init_gaussian_std}  learning_rate: {learning_rate}"
                       f"  momentum: {momentum}")
                 model_name = f"fully_connected_{i_model}"
-                train_and_eval_fully_connected_model(X_train, y_train, X_test, y_test, class_names, save_dir,
-                                                     model_name, learning_rate=learning_rate, momentum=momentum,
+                train_and_eval_fully_connected_model(X_train, y_train, X_test, y_test, class_names,
+                                                     save_dir, model_name,
+                                                     init_type=init_type,
+                                                     learning_rate=learning_rate,
+                                                     sgd_momentum=momentum,
                                                      init_gaussian_std=init_gaussian_std)
                 i_model += 1
+
+
+def optimization():
+    save_dir = osp.join("models", "fully_connected", "optimization")
+    dataset_dir = "cifar-10-batches-py"
+    cache_dir = "data_cache"
+    subsample_fraction = 0.1
+
+    X_train, y_train, X_test, y_test, class_names = (
+        prepare_cifar_data_for_vector_classifier(dataset_dir,
+                                                 cache_dir,
+                                                 subsample_fraction))
+
+    epochs = 100
+    init_type = "gaussian"
+    for optimizer_type in ["adam", "sgd"]:
+        model_name = optimizer_type
+        print('\n', model_name)
+        train_and_eval_fully_connected_model(X_train, y_train, X_test, y_test, class_names,
+                                             save_dir, model_name,
+                                             init_type=init_type,
+                                             epochs=epochs,
+                                             optimizer_type=optimizer_type)
+
+    plot_metrics(models_dir=save_dir,
+                 hyper_param_names_for_label=["optimizer_type"])
 
 
 def inits():
@@ -54,7 +84,8 @@ def inits():
     for init_type in ["xavier", "gaussian"]:
         model_name = f"fully_connected_{init_type}"
         train_and_eval_fully_connected_model(X_train, y_train, X_test, y_test, class_names, save_dir, model_name,
-                                             learning_rate=learning_rate, momentum=momentum, init_type=init_type,
+                                             learning_rate=learning_rate, sgd_momentum=momentum,
+                                             init_type=init_type,
                                              init_gaussian_std=init_gaussian_std)
 
 
@@ -150,7 +181,7 @@ def depth():
     epochs = 100
     hidden_size = 64
     for num_hidden_layers in [1, 2, 3, 9]:
-        model_name = f"depth_{num_hidden_layers}"
+        model_name = f"num_hidden_{num_hidden_layers}"
         print('\n', model_name, '\n', '=' * len(model_name))
         train_and_eval_fully_connected_model(X_train, y_train, X_test, y_test,
                                              class_names, save_dir, model_name,
