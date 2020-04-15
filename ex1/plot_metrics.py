@@ -198,6 +198,10 @@ def _plot_metric_per_model(
 
     if save_path is not None:
         fig.savefig(save_path, bbox_inches="tight")
+    else:
+        plt.show()
+
+    plt.close(fig)
 
 
 def _unique_hyper_params(metric_per_model: Dict[_HyperParams, List[float]]
@@ -219,14 +223,42 @@ def _order_param_names(unique_hyper_params: Dict[str, List[float]]) -> List[str]
     return ordered_param_names
 
 
+def _plot_all():
+    # grid_search
+    save_dir = osp.join("models", "fully_connected", "grid_search")
+    hyper_param_names_for_label = ["init_gaussian_std", "learning_rate", "sgd_momentum"]
+    plot_metrics(save_dir, hyper_param_names_for_label)
+
+    # optimization
+    save_dir = osp.join("models", "fully_connected", "optimization")
+    hyper_param_names_for_label = ["optimizer_type"]
+    plot_metrics(save_dir, hyper_param_names_for_label)
+
+    # initialization
+    save_dir = osp.join("models", "fully_connected", "initialization")
+    hyper_param_names_for_label = ["init_type"]
+    plot_metrics(save_dir, hyper_param_names_for_label)
+
+    # pca
+    save_dir = osp.join("models", "fully_connected", "pca")
+    hyper_param_names_for_label = ["model_name"]
+    plot_metrics(save_dir, hyper_param_names_for_label)
+
+    # regularization
+    save_dir = osp.join("models", "fully_connected", "regularization")
+    hyper_param_names_for_label = ["dropout_drop_probability", "weight_decay"]
+    plot_metrics(save_dir, hyper_param_names_for_label)
+
+    # width
+    save_dir = osp.join("models", "fully_connected", "width")
+    hyper_param_names_for_label = ["hidden_size"]
+    plot_metrics(save_dir, hyper_param_names_for_label)
+
+    # depth
+    save_dir = osp.join("models", "fully_connected", "depth")
+    hyper_param_names_for_label = ["num_hidden_layers"]
+    plot_metrics(save_dir, hyper_param_names_for_label)
+
+
 if __name__ == '__main__':
-    plot_metrics(models_dir=r"models\fully_connected\grid_search",
-                 hyper_param_names_for_label=["momentum", "learning_rate", "init_gaussian_std"])
-    # plot_metrics(models_dir=r"models\fully_connected\inits",
-    #              hyper_param_names_for_label=["init_type"])
-    # plot_metrics(models_dir=r"models\fully_connected\PCA",
-    #              hyper_param_names_for_label=["model_name"])
-    # plot_metrics(models_dir=r"models\fully_connected\regularization",
-    #              hyper_param_names_for_label=["weight_decay", "dropout_drop_probability"])
-    # plot_metrics(models_dir=r"models\fully_connected\depth_lol",
-    #              hyper_param_names_for_label=["num_hidden_layers"])
+    _plot_all()

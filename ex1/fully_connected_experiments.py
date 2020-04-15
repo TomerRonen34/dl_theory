@@ -5,8 +5,10 @@ from sklearn.decomposition import PCA
 from plot_metrics import plot_metrics
 
 
-def grid_search():
+def grid_search(epochs=100):
     save_dir = osp.join("models", "fully_connected", "grid_search")
+    hyper_param_names_for_label = ["init_gaussian_std", "learning_rate", "sgd_momentum"]
+
     dataset_dir = "cifar-10-batches-py"
     cache_dir = "data_cache"
 
@@ -37,15 +39,18 @@ def grid_search():
                                                      init_type=init_type,
                                                      learning_rate=learning_rate,
                                                      sgd_momentum=sgd_momentum,
-                                                     init_gaussian_std=init_gaussian_std)
+                                                     init_gaussian_std=init_gaussian_std,
+                                                     epochs=epochs)
                 i_model += 1
 
     plot_metrics(models_dir=save_dir,
-                 hyper_param_names_for_label=["init_gaussian_std", "learning_rate", "sgd_momentum"])
+                 hyper_param_names_for_label=hyper_param_names_for_label)
 
 
-def optimization():
+def optimization(epochs=100):
     save_dir = osp.join("models", "fully_connected", "optimization")
+    hyper_param_names_for_label = ["optimizer_type"]
+
     dataset_dir = "cifar-10-batches-py"
     cache_dir = "data_cache"
     subsample_fraction = 0.1
@@ -55,7 +60,6 @@ def optimization():
                                                  cache_dir,
                                                  subsample_fraction))
 
-    epochs = 100
     init_type = "gaussian"
     for optimizer_type in ["adam", "sgd"]:
         model_name = optimizer_type
@@ -67,11 +71,13 @@ def optimization():
                                              optimizer_type=optimizer_type)
 
     plot_metrics(models_dir=save_dir,
-                 hyper_param_names_for_label=["optimizer_type"])
+                 hyper_param_names_for_label=hyper_param_names_for_label)
 
 
-def inits():
-    save_dir = osp.join("models", "fully_connected", "inits")
+def initialization(epochs=100):
+    save_dir = osp.join("models", "fully_connected", "initialization")
+    hyper_param_names_for_label = ["init_type"]
+
     dataset_dir = "cifar-10-batches-py"
     cache_dir = "data_cache"
 
@@ -90,14 +96,17 @@ def inits():
         train_and_eval_fully_connected_model(X_train, y_train, X_test, y_test, class_names, save_dir, model_name,
                                              learning_rate=learning_rate, sgd_momentum=momentum,
                                              init_type=init_type,
-                                             init_gaussian_std=init_gaussian_std)
+                                             init_gaussian_std=init_gaussian_std,
+                                             epochs=epochs)
 
     plot_metrics(models_dir=save_dir,
-                 hyper_param_names_for_label=["init_type"])
+                 hyper_param_names_for_label=hyper_param_names_for_label)
 
 
-def pca():
-    save_dir = osp.join("models", "fully_connected", "PCA")
+def pca(epochs=100):
+    save_dir = osp.join("models", "fully_connected", "pca")
+    hyper_param_names_for_label = ["model_name"]
+
     dataset_dir = "cifar-10-batches-py"
     cache_dir = "data_cache"
     subsample_fraction = 0.1
@@ -116,18 +125,22 @@ def pca():
         model_name = f"pca_whitened_dim_{n_components}"
         train_and_eval_fully_connected_model(X_train_pca[:, :n_components], y_train,
                                              X_test_pca[:, :n_components], y_test,
-                                             class_names, save_dir, model_name)
+                                             class_names, save_dir, model_name,
+                                             epochs=epochs)
 
     model_name = "original_data"
     train_and_eval_fully_connected_model(X_train, y_train, X_test, y_test,
-                                         class_names, save_dir, model_name)
+                                         class_names, save_dir, model_name,
+                                         epochs=epochs)
 
     plot_metrics(models_dir=save_dir,
-                 hyper_param_names_for_label=["model_name"])
+                 hyper_param_names_for_label=hyper_param_names_for_label)
 
 
-def regularization():
+def regularization(epochs=100):
     save_dir = osp.join("models", "fully_connected", "regularization")
+    hyper_param_names_for_label = ["dropout_drop_probability", "weight_decay"]
+
     dataset_dir = "cifar-10-batches-py"
     cache_dir = "data_cache"
     subsample_fraction = 0.1
@@ -137,7 +150,6 @@ def regularization():
                                                  cache_dir,
                                                  subsample_fraction))
 
-    epochs = 100
     for weight_decay in [0., 0.1, 0.05, 0.01, 0.001]:
         for dropout_drop_probability in [0., 0.3, 0.5, 0.8]:
             model_name = f"decay_{weight_decay}_dropout_{dropout_drop_probability}"
@@ -149,11 +161,13 @@ def regularization():
                                                  epochs=epochs)
 
     plot_metrics(models_dir=save_dir,
-                 hyper_param_names_for_label=["dropout_drop_probability", "weight_decay"])
+                 hyper_param_names_for_label=hyper_param_names_for_label)
 
 
-def width():
+def width(epochs=100):
     save_dir = osp.join("models", "fully_connected", "width")
+    hyper_param_names_for_label = ["hidden_size"]
+
     dataset_dir = "cifar-10-batches-py"
     cache_dir = "data_cache"
     subsample_fraction = 0.1
@@ -163,7 +177,6 @@ def width():
                                                  cache_dir,
                                                  subsample_fraction))
 
-    epochs = 100
     for log_width in [6, 8, 10, 12]:
         hidden_size = int(2 ** log_width)
         model_name = f"width_{hidden_size}"
@@ -174,11 +187,13 @@ def width():
                                              epochs=epochs)
 
     plot_metrics(models_dir=save_dir,
-                 hyper_param_names_for_label=["hidden_size"])
+                 hyper_param_names_for_label=hyper_param_names_for_label)
 
 
-def depth():
-    save_dir = osp.join("models", "fully_connected", "depth_lol")
+def depth(epochs=100):
+    save_dir = osp.join("models", "fully_connected", "depth")
+    hyper_param_names_for_label = ["num_hidden_layers"]
+
     dataset_dir = "cifar-10-batches-py"
     cache_dir = "data_cache"
     subsample_fraction = 0.1
@@ -188,7 +203,6 @@ def depth():
                                                  cache_dir,
                                                  subsample_fraction))
 
-    epochs = 100
     hidden_size = 64
     for num_hidden_layers in [1, 2, 3, 9]:
         model_name = f"num_hidden_{num_hidden_layers}"
@@ -200,9 +214,16 @@ def depth():
                                              epochs=epochs)
 
     plot_metrics(models_dir=save_dir,
-                 hyper_param_names_for_label=["num_hidden_layers"])
+                 hyper_param_names_for_label=hyper_param_names_for_label)
 
 
 if __name__ == '__main__':
-    depth()
+    epochs = 100
+    grid_search(epochs)
+    optimization(epochs)
+    initialization(epochs)
+    pca(epochs)
+    regularization(epochs)
+    width(epochs)
+    depth(epochs)
     print('\n', "Done")
