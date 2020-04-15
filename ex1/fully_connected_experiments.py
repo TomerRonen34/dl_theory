@@ -26,18 +26,22 @@ def grid_search():
 
     for init_gaussian_std in grid_init_gaussian_std:
         for learning_rate in grid_learning_rate:
-            for momentum in grid_momentum:
+            for sgd_momentum in grid_momentum:
                 print(f"\nmodel {i_model}/{num_models}")
-                print(f"init_gaussian_std: {init_gaussian_std}  learning_rate: {learning_rate}"
-                      f"  momentum: {momentum}")
+                print(f"init_gaussian_std: {init_gaussian_std}"
+                      f"  learning_rate: {learning_rate}"
+                      f"  sgd_momentum: {sgd_momentum}")
                 model_name = f"fully_connected_{i_model}"
                 train_and_eval_fully_connected_model(X_train, y_train, X_test, y_test, class_names,
                                                      save_dir, model_name,
                                                      init_type=init_type,
                                                      learning_rate=learning_rate,
-                                                     sgd_momentum=momentum,
+                                                     sgd_momentum=sgd_momentum,
                                                      init_gaussian_std=init_gaussian_std)
                 i_model += 1
+
+    plot_metrics(models_dir=save_dir,
+                 hyper_param_names_for_label=["init_gaussian_std", "learning_rate", "sgd_momentum"])
 
 
 def optimization():
@@ -88,6 +92,9 @@ def inits():
                                              init_type=init_type,
                                              init_gaussian_std=init_gaussian_std)
 
+    plot_metrics(models_dir=save_dir,
+                 hyper_param_names_for_label=["init_type"])
+
 
 def pca():
     save_dir = osp.join("models", "fully_connected", "PCA")
@@ -114,6 +121,9 @@ def pca():
     model_name = "original_data"
     train_and_eval_fully_connected_model(X_train, y_train, X_test, y_test,
                                          class_names, save_dir, model_name)
+
+    plot_metrics(models_dir=save_dir,
+                 hyper_param_names_for_label=["model_name"])
 
 
 def regularization():
@@ -168,7 +178,7 @@ def width():
 
 
 def depth():
-    save_dir = osp.join("models", "fully_connected", "depth")
+    save_dir = osp.join("models", "fully_connected", "depth_lol")
     dataset_dir = "cifar-10-batches-py"
     cache_dir = "data_cache"
     subsample_fraction = 0.1

@@ -160,8 +160,9 @@ class _LineStyleChooser:
                            ordered_param_names: List[str]):
         self._name_and_value_to_style = {}
         style_elements = self._style_elements()
-        for param_name, param_styles in zip(ordered_param_names, style_elements):
+        for param_name, param_styles_iter in zip(ordered_param_names, style_elements):
             param_values = unique_hyper_params[param_name]
+            param_styles = sorted([next(param_styles_iter) for _ in range(len(param_values))])
             for param_value, param_style in zip(param_values, param_styles):
                 self._name_and_value_to_style[(param_name, param_value)] = param_style
 
@@ -177,24 +178,26 @@ def _plot_metric_per_model(
     keys_and_styles = sorted(keys_and_styles, key=lambda tup: tup[1])
 
     W, H = plt.rcParamsDefault["figure.figsize"]
-    plt.figure(figsize=(2.5 * W, 2.5 * H))
-    plt.title(title)
-    plt.xlabel("epoch")
+    fig, ax = plt.subplots(figsize=(2.5 * W, 2.5 * H))
+    ax.set_title(title, fontsize=24)
+    ax.set_xlabel("epoch", fontsize=20)
+    ax.tick_params(labelsize=18)
     for model_key, line_style in keys_and_styles:
         values = metric_per_model[model_key]
         epochs = list(range(1, len(values) + 1))
-        line, = plt.plot(epochs, values, line_style,
-                         markevery=int(np.ceil(len(values) / 10)), markersize=6)
+        line, = ax.plot(epochs, values, line_style,
+                        markevery=int(np.ceil(len(values) / 10)), markersize=6)
         model_label = model_key.build_model_label()
         line.set_label(model_label)
 
     num_plots = len(metric_per_model)
     ncol = 1 if num_plots <= 10 else 3 if num_plots % 3 == 0 else 2
     legend_title = line_style_chooser.legend()
-    plt.legend(loc="upper left", bbox_to_anchor=(1, 1), ncol=ncol, title=legend_title)
+    ax.legend(loc="upper left", bbox_to_anchor=(1, 1), ncol=ncol,
+              title=legend_title, fontsize=18, title_fontsize=20)
 
     if save_path is not None:
-        plt.savefig(save_path, bbox_inches="tight")
+        fig.savefig(save_path, bbox_inches="tight")
 
 
 def _unique_hyper_params(metric_per_model: Dict[_HyperParams, List[float]]
@@ -219,9 +222,11 @@ def _order_param_names(unique_hyper_params: Dict[str, List[float]]) -> List[str]
 if __name__ == '__main__':
     plot_metrics(models_dir=r"models\fully_connected\grid_search",
                  hyper_param_names_for_label=["momentum", "learning_rate", "init_gaussian_std"])
-    plot_metrics(models_dir=r"models\fully_connected\inits",
-                 hyper_param_names_for_label=["init_type"])
-    plot_metrics(models_dir=r"models\fully_connected\PCA",
-                 hyper_param_names_for_label=["model_name"])
-    plot_metrics(models_dir=r"models\fully_connected\regularization",
-                 hyper_param_names_for_label=["weight_decay", "dropout_drop_probability"])
+    # plot_metrics(models_dir=r"models\fully_connected\inits",
+    #              hyper_param_names_for_label=["init_type"])
+    # plot_metrics(models_dir=r"models\fully_connected\PCA",
+    #              hyper_param_names_for_label=["model_name"])
+    # plot_metrics(models_dir=r"models\fully_connected\regularization",
+    #              hyper_param_names_for_label=["weight_decay", "dropout_drop_probability"])
+    # plot_metrics(models_dir=r"models\fully_connected\depth_lol",
+    #              hyper_param_names_for_label=["num_hidden_layers"])
