@@ -6,6 +6,7 @@ import torch
 import pickle
 import json
 import math
+from utils import RandomStateContextManager
 from fully_connected import FullyConnectedClassifier
 from typing import *
 
@@ -16,63 +17,64 @@ def train_and_eval_fully_connected_model(X_train, y_train, X_test, y_test, class
                                          init_type="xavier", init_gaussian_std=0.001,
                                          hidden_size=256, num_hidden_layers=1, activation="relu",
                                          epochs=100, batch_size=32, seed=34, num_reports=5):
-    num_classes = len(class_names)
-    input_size = X_train.shape[1]
+    with RandomStateContextManager(seed):
+        num_classes = len(class_names)
+        input_size = X_train.shape[1]
 
-    net = FullyConnectedClassifier(num_classes,
-                                   input_size,
-                                   hidden_size,
-                                   num_hidden_layers,
-                                   activation,
-                                   init_type,
-                                   init_gaussian_std,
-                                   dropout_drop_probability)
+        net = FullyConnectedClassifier(num_classes,
+                                       input_size,
+                                       hidden_size,
+                                       num_hidden_layers,
+                                       activation,
+                                       init_type,
+                                       init_gaussian_std,
+                                       dropout_drop_probability)
 
-    if optimizer_type.lower() == "sgd":
-        optimizer = torch.optim.SGD(net.trainable_params(),
-                                    lr=learning_rate,
-                                    momentum=sgd_momentum,
-                                    weight_decay=weight_decay)
-    elif optimizer_type.lower() == "adam":
-        optimizer = torch.optim.Adam(net.trainable_params(),
-                                     lr=learning_rate)
-    else:
-        raise ValueError('optimizer_type must be one of ["sgd", "adam]')
+        if optimizer_type.lower() == "sgd":
+            optimizer = torch.optim.SGD(net.trainable_params(),
+                                        lr=learning_rate,
+                                        momentum=sgd_momentum,
+                                        weight_decay=weight_decay)
+        elif optimizer_type.lower() == "adam":
+            optimizer = torch.optim.Adam(net.trainable_params(),
+                                         lr=learning_rate)
+        else:
+            raise ValueError('optimizer_type must be one of ["sgd", "adam]')
 
-    metrics = fit_classifier(net,
-                             optimizer,
-                             X_train,
-                             y_train,
-                             epochs,
-                             batch_size,
-                             seed,
-                             X_test,
-                             y_test,
-                             num_reports)
+        metrics = fit_classifier(net,
+                                 optimizer,
+                                 X_train,
+                                 y_train,
+                                 epochs,
+                                 batch_size,
+                                 seed,
+                                 X_test,
+                                 y_test,
+                                 num_reports)
 
-    hyper_params = dict(
-        model_name=model_name,
-        optimizer_type=optimizer_type,
-        dropout_drop_probability=dropout_drop_probability,
-        weight_decay=weight_decay,
-        init_gaussian_std=init_gaussian_std,
-        learning_rate=learning_rate,
-        sgd_momentum=sgd_momentum,
-        epochs=epochs,
-        num_classes=num_classes,
-        input_size=input_size,
-        hidden_size=hidden_size,
-        num_hidden_layers=num_hidden_layers,
-        activation=activation,
-        init_type=init_type,
-        batch_size=batch_size,
-        seed=seed)
+        hyper_params = dict(
+            model_name=model_name,
+            optimizer_type=optimizer_type,
+            dropout_drop_probability=dropout_drop_probability,
+            weight_decay=weight_decay,
+            init_gaussian_std=init_gaussian_std,
+            learning_rate=learning_rate,
+            sgd_momentum=sgd_momentum,
+            epochs=epochs,
+            num_classes=num_classes,
+            input_size=input_size,
+            hidden_size=hidden_size,
+            num_hidden_layers=num_hidden_layers,
+            activation=activation,
+            init_type=init_type,
+            batch_size=batch_size,
+            seed=seed)
 
-    save_model(net,
-               metrics,
-               hyper_params,
-               model_name,
-               save_dir)
+        save_model(net,
+                   metrics,
+                   hyper_params,
+                   model_name,
+                   save_dir)
 
 
 def fit_classifier(net,

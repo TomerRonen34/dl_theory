@@ -6,6 +6,8 @@ import os.path as osp
 import numpy as np
 import pickle
 import matplotlib.pyplot as plt
+import random
+import torch
 
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, accuracy_score
 
@@ -103,3 +105,56 @@ def batchify(X: NDArray,
     y_batches = np.array_split(y, num_batches)
     batches = list(zip(X_batches, y_batches))
     return batches
+
+
+class RandomStateContextManager:
+    def __init__(self, seed: int):
+        self.seed = seed
+        self.orig_random_state = random.getstate()
+        self.orig_numpy_state = np.random.get_state()
+        self.orig_torch_state = torch.get_rng_state()
+
+    def __enter__(self):
+        random.seed(self.seed)
+        np.random.seed(self.seed)
+        if self.seed is not None:
+            torch.manual_seed(self.seed)
+        else:
+            torch.seed()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        random.setstate(self.orig_random_state)
+        np.random.set_state(self.orig_numpy_state)
+        torch.set_rng_state(self.orig_torch_state)
+
+
+def _test_random_state_context_manager():
+    def print_randoms():
+        print(random.randint(0, 1000), ',',
+              np.random.randint(1000), ',',
+              torch.randint(1000, size=(1,)).item())
+
+    def with_manager():
+        print("\nwith context manager:")
+        with RandomStateContextManager(34):
+            print_randoms()
+
+    def with_None_manager():
+        print("\nwith None-seed context manager:")
+        with RandomStateContextManager(None):
+            print_randoms()
+
+    def without_manager():
+        print("\nwithout context manager")
+        print_randoms()
+
+    without_manager()
+    with_manager()
+    without_manager()
+    with_manager()
+    with_None_manager()
+    with_None_manager()
+
+
+if __name__ == '__main__':
+    _test_random_state_context_manager()
