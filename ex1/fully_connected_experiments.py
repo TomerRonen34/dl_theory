@@ -2,7 +2,7 @@ import os.path as osp
 from cifar_loader import prepare_cifar_data_for_vector_classifier
 from training import train_and_eval_fully_connected_model
 from sklearn.decomposition import PCA
-from plot_metrics import plot_metrics
+from model_comparison import compare_models
 
 
 def grid_search(epochs=100):
@@ -43,8 +43,8 @@ def grid_search(epochs=100):
                                                      epochs=epochs)
                 i_model += 1
 
-    plot_metrics(models_dir=save_dir,
-                 hyper_param_names_to_compare=hyper_param_names_for_label)
+    compare_models(models_dir=save_dir,
+                   hyper_param_names_to_compare=hyper_param_names_for_label)
 
 
 def optimization(epochs=100):
@@ -70,8 +70,8 @@ def optimization(epochs=100):
                                              epochs=epochs,
                                              optimizer_type=optimizer_type)
 
-    plot_metrics(models_dir=save_dir,
-                 hyper_param_names_to_compare=hyper_param_names_for_label)
+    compare_models(models_dir=save_dir,
+                   hyper_param_names_to_compare=hyper_param_names_for_label)
 
 
 def initialization(epochs=100):
@@ -99,8 +99,8 @@ def initialization(epochs=100):
                                              init_gaussian_std=init_gaussian_std,
                                              epochs=epochs)
 
-    plot_metrics(models_dir=save_dir,
-                 hyper_param_names_to_compare=hyper_param_names_for_label)
+    compare_models(models_dir=save_dir,
+                   hyper_param_names_to_compare=hyper_param_names_for_label)
 
 
 def pca(epochs=100):
@@ -133,8 +133,8 @@ def pca(epochs=100):
                                          class_names, save_dir, model_name,
                                          epochs=epochs)
 
-    plot_metrics(models_dir=save_dir,
-                 hyper_param_names_to_compare=hyper_param_names_for_label)
+    compare_models(models_dir=save_dir,
+                   hyper_param_names_to_compare=hyper_param_names_for_label)
 
 
 def regularization(epochs=100):
@@ -160,8 +160,8 @@ def regularization(epochs=100):
                                                  dropout_drop_probability=dropout_drop_probability,
                                                  epochs=epochs)
 
-    plot_metrics(models_dir=save_dir,
-                 hyper_param_names_to_compare=hyper_param_names_for_label)
+    compare_models(models_dir=save_dir,
+                   hyper_param_names_to_compare=hyper_param_names_for_label)
 
 
 def width(epochs=100):
@@ -186,8 +186,8 @@ def width(epochs=100):
                                              hidden_size=hidden_size,
                                              epochs=epochs)
 
-    plot_metrics(models_dir=save_dir,
-                 hyper_param_names_to_compare=hyper_param_names_for_label)
+    compare_models(models_dir=save_dir,
+                   hyper_param_names_to_compare=hyper_param_names_for_label)
 
 
 def depth(epochs=100):
@@ -213,8 +213,8 @@ def depth(epochs=100):
                                              hidden_size=hidden_size,
                                              epochs=epochs)
 
-    plot_metrics(models_dir=save_dir,
-                 hyper_param_names_to_compare=hyper_param_names_for_label)
+    compare_models(models_dir=save_dir,
+                   hyper_param_names_to_compare=hyper_param_names_for_label)
 
 
 if __name__ == '__main__':

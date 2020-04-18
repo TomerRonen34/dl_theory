@@ -4,15 +4,17 @@ import json
 from glob import glob
 from typing import *
 import matplotlib.pyplot as plt
-from itertools import cycle
 import numpy as np
 import pandas as pd
+
+from hyper_params import HyperParams
+from line_style_chooser import LineStyleChooser
 
 
 def compare_models(models_dir: str,
                    hyper_param_names_to_compare: List[str]):
     plot_metrics(models_dir, hyper_param_names_to_compare)
-    create_model_comparison_table(models_dir, hyper_param_names_to_compare)
+    create_comparison_tables(models_dir, hyper_param_names_to_compare)
 
 
 def plot_metrics(models_dir: str,
@@ -21,40 +23,28 @@ def plot_metrics(models_dir: str,
     _plot_metrics_by_type(metrics_per_model, models_dir)
 
 
-def create_model_comparison_table(models_dir: str,
-                                  hyper_param_names_to_compare: List[str]):
+def create_comparison_tables(models_dir: str,
+                             hyper_param_names_to_compare: List[str]):
     metrics_per_model = _gather_metrics(models_dir, hyper_param_names_to_compare)
     best_metrics_per_model = {model_key: _best_epoch_metrics(metrics)
                               for model_key, metrics in metrics_per_model.items()}
     comparison_table = _create_model_comparison_table(best_metrics_per_model)
     _save_comparison_table(comparison_table, models_dir)
+    hyper_param_statistics = _create_hyper_param_statistics(comparison_table,
+                                                            hyper_param_names_to_compare)
+    _save_hyper_param_statistics(hyper_param_statistics, models_dir)
 
 
-class _HyperParams:
-    def __init__(self, hyper_params: Dict[str, Any]):
-        self.hyper_params = tuple(hyper_params.items())
-
-    def as_dict(self) -> Dict[str, Any]:
-        return dict(self.hyper_params)
-
-    def build_model_label(self) -> str:
-        hyper_params = self.as_dict()
-        if list(hyper_params.keys()) == ["model_name"]:
-            model_label = hyper_params["model_name"]
-        else:
-            model_label = '\n'.join([f"{param_name}={hyper_params[param_name]}"
-                                     for param_name in hyper_params.keys()])
-        return model_label
-
-    def __hash__(self):
-        return hash(self.hyper_params)
-
-    def __eq__(self, other):
-        return self.hyper_params == other.hyper_params
+def _best_epoch_metrics(metrics: Dict[str, List[float]]
+                        ) -> Dict[str, float]:
+    best_epoch = np.argmax(metrics["test_accuracy"])
+    best_epoch_metrics = {metric_name: metrics[metric_name][best_epoch]
+                          for metric_name in metrics.keys()}
+    return best_epoch_metrics
 
 
 def _create_model_comparison_table(
-        best_metrics_per_model: Dict[_HyperParams, Dict[str, float]]) -> pd.DataFrame:
+        best_metrics_per_model: Dict[HyperParams, Dict[str, float]]) -> pd.DataFrame:
     table_rows = []
     for model_key, best_epoch_metrics in best_metrics_per_model.items():
         hyper_params = model_key.as_dict()
@@ -76,18 +66,40 @@ def _create_model_comparison_table(
 
 def _save_comparison_table(comparison_table: pd.DataFrame,
                            models_dir: str):
-    save_dir = osp.join(models_dir, "figures")
+    save_dir = osp.join(models_dir, "model_comparison")
     os.makedirs(save_dir, exist_ok=True)
-    save_path = osp.join(save_dir, "comparison_table.csv")
-    comparison_table.to_csv(save_path)
+    save_path = osp.join(save_dir, "comparison_table.xlsx")
+    comparison_table.to_excel(save_path)
 
 
-def _best_epoch_metrics(metrics: Dict[str, List[float]]
-                        ) -> Dict[str, float]:
-    best_epoch = np.argmax(metrics["test_accuracy"])
-    best_epoch_metrics = {metric_name: metrics[metric_name][best_epoch]
-                          for metric_name in metrics.keys()}
-    return best_epoch_metrics
+def _create_hyper_param_statistics(comparison_table: pd.DataFrame,
+                                   hyper_param_names_to_compare: List[str]):
+    stats_per_param = []
+    for hyper_param_name in hyper_param_names_to_compare:
+        groupby_param = comparison_table.groupby(hyper_param_name)
+        test_stats = groupby_param[["test_accuracy"]].agg(["median", "min", "max"])
+        train_stats = groupby_param[["train_accuracy"]].agg(["median", "min", "max"])
+        param_stats = pd.concat([test_stats, train_stats], axis="columns")
+        stats_per_param.append(param_stats)
+
+    stats_per_param = [_named_index_to_multi_index(stats) for stats in stats_per_param]
+    hyper_param_statistics = pd.concat(stats_per_param)
+    return hyper_param_statistics
+
+
+def _named_index_to_multi_index(df: pd.DataFrame):
+    named_index = df.index
+    multi_index = pd.MultiIndex.from_tuples((named_index.name, value) for value in named_index)
+    df = df.set_index(multi_index)
+    return df
+
+
+def _save_hyper_param_statistics(hyper_param_statistics: pd.DataFrame,
+                                 models_dir: str):
+    save_dir = osp.join(models_dir, "model_comparison")
+    os.makedirs(save_dir, exist_ok=True)
+    save_path = osp.join(save_dir, "hyper_param_statistics.xlsx")
+    hyper_param_statistics.to_excel(save_path)
 
 
 def _gather_metrics(models_dir: str,
@@ -127,11 +139,11 @@ def _extract_hyper_params(hyper_param_file: str,
 
 def _build_model_key(metrics_file: str,
                      hyper_param_names_for_label: List[str]
-                     ) -> _HyperParams:
+                     ) -> HyperParams:
     hyper_param_file = _find_matching_hyper_param_file(metrics_file)
     hyper_params = _extract_hyper_params(hyper_param_file,
                                          to_extract=hyper_param_names_for_label)
-    model_key = _HyperParams(hyper_params)
+    model_key = HyperParams(hyper_params)
     return model_key
 
 
@@ -145,7 +157,7 @@ def _plot_metrics_by_type(metrics_per_model,
                           models_dir: str):
     metrics_by_type = _rearrange_metrics_by_type(metrics_per_model)
     for metric_name, specific_metric_per_model in metrics_by_type.items():
-        figures_dir = osp.join(models_dir, "figures")
+        figures_dir = osp.join(models_dir, "model_comparison")
         os.makedirs(figures_dir, exist_ok=True)
         save_path = osp.join(figures_dir, metric_name + ".png")
         _plot_metric_per_model(specific_metric_per_model, title=metric_name, save_path=save_path)
@@ -178,54 +190,12 @@ def _extract_specific_metric(metrics_per_model,
     return specific_metric_per_model
 
 
-class _LineStyleChooser:
-    def __init__(self, unique_hyper_params: Dict[str, List[float]]):
-        ordered_param_names = _order_param_names(unique_hyper_params)
-        self._build_line_styles(unique_hyper_params, ordered_param_names)
-        self._build_legend(ordered_param_names)
-
-    def choose(self, model_key: _HyperParams) -> str:
-        line_style = ''
-        for name_and_value in model_key.as_dict().items():
-            line_style += self._name_and_value_to_style[name_and_value]
-        return line_style
-
-    def legend(self):
-        return self._legend
-
-    def _build_legend(self, ordered_param_names: List[str]):
-        element_names = ["color", "line_shape", "marker"]
-        num_elements = min(len(element_names), len(ordered_param_names))
-        legend = ' | '.join([f"{element}: {param}" for param, element in
-                             zip(ordered_param_names[:num_elements], element_names[:num_elements])])
-        self._legend = legend
-
-    @staticmethod
-    def _style_elements():
-        colors = ['b', 'g', 'r', 'm', 'k', 'c']
-        line_shapes = ['-', '--', ':', '-.']
-        markers = ['o', 's', '^', '*']
-        style_elements = [cycle(colors), cycle(line_shapes), cycle(markers)]
-        return style_elements
-
-    def _build_line_styles(self,
-                           unique_hyper_params: Dict[str, List[float]],
-                           ordered_param_names: List[str]):
-        self._name_and_value_to_style = {}
-        style_elements = self._style_elements()
-        for param_name, param_styles_iter in zip(ordered_param_names, style_elements):
-            param_values = unique_hyper_params[param_name]
-            param_styles = sorted([next(param_styles_iter) for _ in range(len(param_values))])
-            for param_value, param_style in zip(param_values, param_styles):
-                self._name_and_value_to_style[(param_name, param_value)] = param_style
-
-
 def _plot_metric_per_model(
-        metric_per_model: Dict[_HyperParams, List[float]],
+        metric_per_model: Dict[HyperParams, List[float]],
         title: str,
         save_path: str = None):
     unique_hyper_params = _unique_hyper_params(metric_per_model)
-    line_style_chooser = _LineStyleChooser(unique_hyper_params)
+    line_style_chooser = LineStyleChooser(unique_hyper_params)
     keys_and_styles = [(model_key, line_style_chooser.choose(model_key))
                        for model_key in metric_per_model.keys()]
     keys_and_styles = sorted(keys_and_styles, key=lambda tup: tup[1])
@@ -257,7 +227,7 @@ def _plot_metric_per_model(
     plt.close(fig)
 
 
-def _unique_hyper_params(metric_per_model: Dict[_HyperParams, List[float]]
+def _unique_hyper_params(metric_per_model: Dict[HyperParams, List[float]]
                          ) -> Dict[str, List[float]]:
     model_keys = list(metric_per_model.keys())
     hyper_param_names = list(model_keys[0].as_dict().keys())
@@ -267,13 +237,6 @@ def _unique_hyper_params(metric_per_model: Dict[_HyperParams, List[float]]
             all_hyper_params[name].append(value)
     unique_hyper_params = {name: list(set(values)) for name, values in all_hyper_params.items()}
     return unique_hyper_params
-
-
-def _order_param_names(unique_hyper_params: Dict[str, List[float]]) -> List[str]:
-    unique_param_counts = [(name, len(values)) for name, values in unique_hyper_params.items()]
-    ordered_param_counts = sorted(unique_param_counts, key=lambda tup: tup[1], reverse=True)
-    ordered_param_names = [name for name, count in ordered_param_counts]
-    return ordered_param_names
 
 
 def _compare_all():
