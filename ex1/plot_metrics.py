@@ -6,12 +6,88 @@ from typing import *
 import matplotlib.pyplot as plt
 from itertools import cycle
 import numpy as np
+import pandas as pd
+
+
+def compare_models(models_dir: str,
+                   hyper_param_names_to_compare: List[str]):
+    plot_metrics(models_dir, hyper_param_names_to_compare)
+    create_model_comparison_table(models_dir, hyper_param_names_to_compare)
 
 
 def plot_metrics(models_dir: str,
-                 hyper_param_names_for_label: List[str]):
-    metrics_per_model = _gather_metrics(models_dir, hyper_param_names_for_label)
+                 hyper_param_names_to_compare: List[str]):
+    metrics_per_model = _gather_metrics(models_dir, hyper_param_names_to_compare)
     _plot_metrics_by_type(metrics_per_model, models_dir)
+
+
+def create_model_comparison_table(models_dir: str,
+                                  hyper_param_names_to_compare: List[str]):
+    metrics_per_model = _gather_metrics(models_dir, hyper_param_names_to_compare)
+    best_metrics_per_model = {model_key: _best_epoch_metrics(metrics)
+                              for model_key, metrics in metrics_per_model.items()}
+    comparison_table = _create_model_comparison_table(best_metrics_per_model)
+    _save_comparison_table(comparison_table, models_dir)
+
+
+class _HyperParams:
+    def __init__(self, hyper_params: Dict[str, Any]):
+        self.hyper_params = tuple(hyper_params.items())
+
+    def as_dict(self) -> Dict[str, Any]:
+        return dict(self.hyper_params)
+
+    def build_model_label(self) -> str:
+        hyper_params = self.as_dict()
+        if list(hyper_params.keys()) == ["model_name"]:
+            model_label = hyper_params["model_name"]
+        else:
+            model_label = '\n'.join([f"{param_name}={hyper_params[param_name]}"
+                                     for param_name in hyper_params.keys()])
+        return model_label
+
+    def __hash__(self):
+        return hash(self.hyper_params)
+
+    def __eq__(self, other):
+        return self.hyper_params == other.hyper_params
+
+
+def _create_model_comparison_table(
+        best_metrics_per_model: Dict[_HyperParams, Dict[str, float]]) -> pd.DataFrame:
+    table_rows = []
+    for model_key, best_epoch_metrics in best_metrics_per_model.items():
+        hyper_params = model_key.as_dict()
+        row = {**hyper_params, **best_epoch_metrics}
+        table_rows.append(row)
+    comparison_table = pd.DataFrame(table_rows)
+
+    comparison_table = comparison_table.sort_values(by="test_accuracy", ascending=False)
+    comparison_table.index = range(1, len(comparison_table) + 1)
+
+    hyper_param_names = list(hyper_params.keys())
+    primary_metric_names = ["test_accuracy", "train_accuracy", "test_loss", "train_loss"]
+    minory_metric_names = list(set(best_epoch_metrics.keys()).difference(primary_metric_names))
+    column_order = hyper_param_names + primary_metric_names + minory_metric_names
+    comparison_table = comparison_table[column_order]
+
+    return comparison_table
+
+
+def _save_comparison_table(comparison_table: pd.DataFrame,
+                           models_dir: str):
+    save_dir = osp.join(models_dir, "figures")
+    os.makedirs(save_dir, exist_ok=True)
+    save_path = osp.join(save_dir, "comparison_table.csv")
+    comparison_table.to_csv(save_path)
+
+
+def _best_epoch_metrics(metrics: Dict[str, List[float]]
+                        ) -> Dict[str, float]:
+    best_epoch = np.argmax(metrics["test_accuracy"])
+    best_epoch_metrics = {metric_name: metrics[metric_name][best_epoch]
+                          for metric_name in metrics.keys()}
+    return best_epoch_metrics
 
 
 def _gather_metrics(models_dir: str,
@@ -47,29 +123,6 @@ def _extract_hyper_params(hyper_param_file: str,
         hyper_params = json.load(f)
     hyper_params = {param_name: hyper_params[param_name] for param_name in to_extract}
     return hyper_params
-
-
-class _HyperParams:
-    def __init__(self, hyper_params: Dict[str, Any]):
-        self.hyper_params = tuple(hyper_params.items())
-
-    def as_dict(self) -> Dict[str, Any]:
-        return dict(self.hyper_params)
-
-    def build_model_label(self) -> str:
-        hyper_params = self.as_dict()
-        if list(hyper_params.keys()) == ["model_name"]:
-            model_label = hyper_params["model_name"]
-        else:
-            model_label = '\n'.join([f"{param_name}={hyper_params[param_name]}"
-                                     for param_name in hyper_params.keys()])
-        return model_label
-
-    def __hash__(self):
-        return hash(self.hyper_params)
-
-    def __eq__(self, other):
-        return self.hyper_params == other.hyper_params
 
 
 def _build_model_key(metrics_file: str,
@@ -223,42 +276,42 @@ def _order_param_names(unique_hyper_params: Dict[str, List[float]]) -> List[str]
     return ordered_param_names
 
 
-def _plot_all():
+def _compare_all():
     # grid_search
     save_dir = osp.join("models", "fully_connected", "grid_search")
     hyper_param_names_for_label = ["init_gaussian_std", "learning_rate", "sgd_momentum"]
-    plot_metrics(save_dir, hyper_param_names_for_label)
+    compare_models(save_dir, hyper_param_names_for_label)
 
     # optimization
     save_dir = osp.join("models", "fully_connected", "optimization")
     hyper_param_names_for_label = ["optimizer_type"]
-    plot_metrics(save_dir, hyper_param_names_for_label)
+    compare_models(save_dir, hyper_param_names_for_label)
 
     # initialization
     save_dir = osp.join("models", "fully_connected", "initialization")
     hyper_param_names_for_label = ["init_type"]
-    plot_metrics(save_dir, hyper_param_names_for_label)
+    compare_models(save_dir, hyper_param_names_for_label)
 
     # pca
     save_dir = osp.join("models", "fully_connected", "pca")
     hyper_param_names_for_label = ["model_name"]
-    plot_metrics(save_dir, hyper_param_names_for_label)
+    compare_models(save_dir, hyper_param_names_for_label)
 
     # regularization
     save_dir = osp.join("models", "fully_connected", "regularization")
     hyper_param_names_for_label = ["dropout_drop_probability", "weight_decay"]
-    plot_metrics(save_dir, hyper_param_names_for_label)
+    compare_models(save_dir, hyper_param_names_for_label)
 
     # width
     save_dir = osp.join("models", "fully_connected", "width")
     hyper_param_names_for_label = ["hidden_size"]
-    plot_metrics(save_dir, hyper_param_names_for_label)
+    compare_models(save_dir, hyper_param_names_for_label)
 
     # depth
     save_dir = osp.join("models", "fully_connected", "depth")
     hyper_param_names_for_label = ["num_hidden_layers"]
-    plot_metrics(save_dir, hyper_param_names_for_label)
+    compare_models(save_dir, hyper_param_names_for_label)
 
 
 if __name__ == '__main__':
-    _plot_all()
+    _compare_all()

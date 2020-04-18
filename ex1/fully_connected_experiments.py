@@ -44,7 +44,7 @@ def grid_search(epochs=100):
                 i_model += 1
 
     plot_metrics(models_dir=save_dir,
-                 hyper_param_names_for_label=hyper_param_names_for_label)
+                 hyper_param_names_to_compare=hyper_param_names_for_label)
 
 
 def optimization(epochs=100):
@@ -71,7 +71,7 @@ def optimization(epochs=100):
                                              optimizer_type=optimizer_type)
 
     plot_metrics(models_dir=save_dir,
-                 hyper_param_names_for_label=hyper_param_names_for_label)
+                 hyper_param_names_to_compare=hyper_param_names_for_label)
 
 
 def initialization(epochs=100):
@@ -100,7 +100,7 @@ def initialization(epochs=100):
                                              epochs=epochs)
 
     plot_metrics(models_dir=save_dir,
-                 hyper_param_names_for_label=hyper_param_names_for_label)
+                 hyper_param_names_to_compare=hyper_param_names_for_label)
 
 
 def pca(epochs=100):
@@ -134,7 +134,7 @@ def pca(epochs=100):
                                          epochs=epochs)
 
     plot_metrics(models_dir=save_dir,
-                 hyper_param_names_for_label=hyper_param_names_for_label)
+                 hyper_param_names_to_compare=hyper_param_names_for_label)
 
 
 def regularization(epochs=100):
@@ -161,7 +161,7 @@ def regularization(epochs=100):
                                                  epochs=epochs)
 
     plot_metrics(models_dir=save_dir,
-                 hyper_param_names_for_label=hyper_param_names_for_label)
+                 hyper_param_names_to_compare=hyper_param_names_for_label)
 
 
 def width(epochs=100):
@@ -187,7 +187,7 @@ def width(epochs=100):
                                              epochs=epochs)
 
     plot_metrics(models_dir=save_dir,
-                 hyper_param_names_for_label=hyper_param_names_for_label)
+                 hyper_param_names_to_compare=hyper_param_names_for_label)
 
 
 def depth(epochs=100):
@@ -214,7 +214,7 @@ def depth(epochs=100):
                                              epochs=epochs)
 
     plot_metrics(models_dir=save_dir,
-                 hyper_param_names_for_label=hyper_param_names_for_label)
+                 hyper_param_names_to_compare=hyper_param_names_for_label)
 
 
 if __name__ == '__main__':
