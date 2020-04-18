@@ -1,7 +1,5 @@
 import torch
-from torch.autograd import Variable
-from initializers import gaussian_init, xavier_init
-from functools import partial
+from layers import FullyConnectedLayer
 
 
 class FullyConnectedClassifier:
@@ -85,72 +83,6 @@ class FullyConnectedClassifier:
             self.activation = torch.tanh
         else:
             raise ValueError('activation should be one of ["relu", "tanh"]')
-
-
-class FullyConnectedLayer:
-    def __init__(self,
-                 input_size: int,
-                 output_size: int,
-                 with_bias: bool,
-                 init_type: str,
-                 init_gaussian_std: float = None,
-                 dropout_drop_probability: float = 0.):
-        self.phase = "train"
-        self.with_bias = with_bias
-        self.__choose_init_func(init_type, init_gaussian_std)
-        self.W = Variable(self.init_func((input_size, output_size)), requires_grad=True)
-        if self.with_bias:
-            self.b = Variable(torch.zeros(1, output_size), requires_grad=True)
-        self.dropout = None
-        if dropout_drop_probability != 0.:
-            self.dropout = Dropout(dropout_drop_probability)
-
-    def forward(self, x):
-        res = torch.matmul(x, self.W)
-        if self.with_bias:
-            res = res + self.b
-        if self.dropout is not None:
-            res = self.dropout.forward(res)
-        return res
-
-    def trainable_params(self):
-        params = [self.W]
-        if self.with_bias:
-            params.append(self.b)
-        return params
-
-    def set_phase(self, phase: str):
-        self.phase = phase
-        if self.dropout is not None:
-            self.dropout.set_phase(phase)
-
-    def __choose_init_func(self, init_type: str, init_gaussian_std: float):
-        if init_type.lower() == "gaussian":
-            if init_gaussian_std is None:
-                raise ValueError("init_gaussian_std can't be None when using gaussian initialization")
-            self.init_func = partial(gaussian_init, std=init_gaussian_std, mean=0.)
-        elif init_type.lower() == "xavier":
-            self.init_func = xavier_init
-        else:
-            raise ValueError('init_type should be one of ["gaussian", "xavier"]')
-
-
-class Dropout:
-    def __init__(self, drop_probability: float):
-        self.phase = "train"
-        self.drop_probability = drop_probability
-
-    def forward(self, x):
-        if self.phase == "train":
-            drop_mask = torch.rand_like(x) < self.drop_probability
-            res = torch.where(drop_mask, torch.Tensor([0.]), x)
-            res /= 1 - self.drop_probability
-            return res
-        else:
-            return x
-
-    def set_phase(self, phase: str):
-        self.phase = phase
 
 
 def _example():
