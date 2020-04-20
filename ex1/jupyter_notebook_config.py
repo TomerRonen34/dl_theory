@@ -1,7 +1,6 @@
 # Reference: https://svds.com/jupyter-notebook-best-practices-for-data-science/
 import os.path as osp
 from subprocess import check_call
-import re
 
 
 def convert_notebook_to_html(work_dir, fname):
