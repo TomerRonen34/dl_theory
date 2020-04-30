@@ -2,10 +2,10 @@ import numpy as np
 import pickle
 import os
 import os.path as osp
-from utils import shuffle_multiple_arrays
+from utils import shuffle_multiple_arrays, device
 from typing import *
 from nptyping import *
-
+import torch
 
 def load_cifar_dataset(dataset_dir: str
                        ) -> Tuple[NDArray[(Any, 32, 32, 3), np.uint8],
@@ -20,25 +20,28 @@ def load_cifar_dataset(dataset_dir: str
     return train_images, train_labels, test_images, test_labels, class_names
 
 
-def prepare_cifar_data_for_vector_classifier(dataset_dir: str,
-                                             cache_dir: str,
-                                             subsample_fraction: float = 0.1,
-                                             seed: int = 34):
+def prepare_cifar_data_for_classifier(dataset_dir: str, cache_dir: str, subsample_fraction: float = 0.1,
+                                      seed: int = 34, keep_as_image=False):
     if cache_dir is None:
-        return _prepare_for_vector_classifier(dataset_dir, subsample_fraction, seed)
+        return _prepare_for_classifier(dataset_dir, keep_as_image, subsample_fraction, seed)
 
     os.makedirs(cache_dir, exist_ok=True)
+
+    if keep_as_image:
+        dim_str = 'as_image'
+    else:
+        dim_str = 'as_vector'
 
     if subsample_fraction is None:
         data_dump_path = osp.join(
             cache_dir, f"cifar_vectors_seed_{seed}.npz")
     else:
         data_dump_path = osp.join(
-            cache_dir, f"cifar_vectors_subsample_{subsample_fraction:.2f}_seed_{seed}.npz")
+            cache_dir, f"cifar_vectors_subsample_{subsample_fraction:.2f}_seed_{seed}_{dim_str}.npz")
 
     if not osp.exists(data_dump_path):
         X_train, y_train, X_test, y_test, class_names = (
-            _prepare_for_vector_classifier(dataset_dir, subsample_fraction, seed))
+            _prepare_for_classifier(dataset_dir, keep_as_image, subsample_fraction, seed))
         np.savez(data_dump_path, X_train=X_train, y_train=y_train,
                  X_test=X_test, y_test=y_test, class_names=class_names)
     else:
@@ -50,18 +53,19 @@ def prepare_cifar_data_for_vector_classifier(dataset_dir: str,
     return X_train, y_train, X_test, y_test, class_names
 
 
-def _prepare_for_vector_classifier(dataset_dir: str,
-                                   subsample_fraction: float = None,
-                                   seed: int = 34):
+def _prepare_for_classifier(dataset_dir: str, keep_as_image=False, subsample_fraction: float = None,
+                            seed: int = 34):
     orig_train_images, orig_train_labels, orig_test_images, orig_test_labels, class_names = (
         load_cifar_dataset(dataset_dir))
-    train_images, train_labels = shuffle_multiple_arrays(orig_train_images, orig_train_labels, seed=seed)
-    test_images, test_labels = shuffle_multiple_arrays(orig_test_images, orig_test_labels, seed=seed)
+    train_images, y_train = shuffle_multiple_arrays(orig_train_images, orig_train_labels, seed=seed)
+    test_images, y_test = shuffle_multiple_arrays(orig_test_images, orig_test_labels, seed=seed)
 
-    X_train = train_images.reshape(len(train_images), -1) / 255.
-    X_test = test_images.reshape(len(test_images), -1) / 255.
-    y_train = train_labels
-    y_test = test_labels
+    if keep_as_image:
+        X_train = np.rollaxis(train_images, 3, 1) / 255.
+        X_test = np.rollaxis(test_images, 3, 1) / 255.
+    else:
+        X_train = train_images.reshape(len(train_images), -1) / 255.
+        X_test = test_images.reshape(len(test_images), -1) / 255.
 
     if subsample_fraction is not None:
         num_train = int(len(X_train) * subsample_fraction)

@@ -1,6 +1,5 @@
 from typing import *
 from nptyping import *
-
 import os
 import os.path as osp
 import numpy as np
@@ -11,6 +10,10 @@ import torch
 
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, accuracy_score
 
+if torch.cuda.is_available():
+    device = torch.device('cuda')
+else:
+    device = torch.device('cpu')
 
 def fit_and_save(model, X_train, y_train,
                  save_dir, model_name):

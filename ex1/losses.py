@@ -1,12 +1,12 @@
 import torch
-
+from utils import device
 
 def cross_entropy_loss(probs, targets):
     """
     :param probs: float[samples, classes]
     :param targets: int[samples]
     """
-    eps = torch.Tensor([1e-10])
+    eps = torch.Tensor([1e-10]).to(device=device)
     probs = torch.max(probs, eps)
 
     correct_class_prob = probs[range(len(probs)), targets]

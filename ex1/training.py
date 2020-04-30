@@ -6,8 +6,9 @@ import torch
 import pickle
 import json
 import math
-from utils import RandomStateContextManager
+from utils import RandomStateContextManager, device
 from fully_connected import FullyConnectedClassifier
+from cnn import CNNClassifier
 from typing import *
 
 
@@ -76,6 +77,66 @@ def train_and_eval_fully_connected_model(X_train, y_train, X_test, y_test, class
                    model_name,
                    save_dir)
 
+def train_and_eval_cnn_model(X_train, y_train, X_test, y_test, class_names, save_dir, model_name,
+                             conv_layers_params,
+                             weight_decay=0., dropout_drop_probability=0.,
+                             optimizer_type="sgd", learning_rate=0.0001, sgd_momentum=0.9,
+                             init_type='xavier', init_gaussian_std=0.1,
+                             hidden_size=784, epochs=100, batch_size=1, seed=34, num_reports=5):
+    with RandomStateContextManager(seed):
+        num_classes = len(class_names)
+        input_size = X_train.shape[1]
+
+        net = CNNClassifier(num_classes, hidden_size, conv_layers_params,
+                            init_type,
+                            init_gaussian_std,
+                            dropout_drop_probability)
+
+        if optimizer_type.lower() == "sgd":
+            optimizer = torch.optim.SGD(net.trainable_params(),
+                                        lr=learning_rate,
+                                        momentum=sgd_momentum,
+                                        weight_decay=weight_decay)
+        elif optimizer_type.lower() == "adam":
+            optimizer = torch.optim.Adam(net.trainable_params(),
+                                         lr=learning_rate)
+        else:
+            raise ValueError('optimizer_type must be one of ["sgd", "adam]')
+
+        metrics = fit_classifier(net,
+                                 optimizer,
+                                 X_train,
+                                 y_train,
+                                 epochs,
+                                 batch_size,
+                                 seed,
+                                 X_test,
+                                 y_test,
+                                 num_reports)
+
+        hyper_params = dict(
+            model_name=model_name,
+            optimizer_type=optimizer_type,
+            dropout_drop_probability=dropout_drop_probability,
+            weight_decay=weight_decay,
+            init_gaussian_std=init_gaussian_std,
+            learning_rate=learning_rate,
+            sgd_momentum=sgd_momentum,
+            epochs=epochs,
+            num_classes=num_classes,
+            input_size=input_size,
+            hidden_size=hidden_size,
+            init_type=init_type,
+            batch_size=batch_size,
+            conv_layers_params=conv_layers_params,
+            seed=seed)
+
+        save_model(net,
+                   metrics,
+                   hyper_params,
+                   model_name,
+                   save_dir)
+
 
 def fit_classifier(net,
                    optimizer,
@@ -101,21 +162,25 @@ def fit_classifier(net,
         "grad_l2": []
     })
 
+    # test_loss, test_accuracy = eval_classifier(net, X_test, y_test)
+
     for curr_epoch in range(1, epochs + 1):
         epoch_seed = seed + curr_epoch if seed is not None else None
         batches = batchify(X_train, y_train, batch_size, seed=epoch_seed)
 
         for i_batch, (X_batch, y_batch) in enumerate(batches):
             # forward
-            X_batch = torch.FloatTensor(X_batch)
-            y_batch = torch.LongTensor(y_batch)
+            X_batch = torch.from_numpy(X_batch).float().to(device)
+            y_batch = torch.from_numpy(y_batch).long().to(device)
             probs = net.forward(X_batch)
             loss = cross_entropy_loss(probs, y_batch)
 
             # gradient step
-            optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+            optimizer.zero_grad()
+            # if device == 'cuda':
+            #     torch.cuda.empty_cache()
 
         # update metrics
         weights_l2, grad_l2 = _calculate_l2_norms(optimizer)
@@ -168,7 +233,7 @@ def _calculate_l2_norms(optimizer) -> Tuple[float, float]:
 
 
 def eval_classifier(net, X, y):
-    X, y = torch.FloatTensor(X), torch.LongTensor(y)
+    X, y = torch.from_numpy(X).float().to(device), torch.from_numpy(y).long().to(device)
     probs = net.predict_proba(X)
     pred_labels = probs.argmax(axis=1)
 
