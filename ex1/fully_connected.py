@@ -54,10 +54,8 @@ class FullyConnectedClassifier:
     def predict_proba(self, x):
         phase = self.phase
         self.set_phase("eval")
-        t = time()
         with torch.no_grad():
             probs = self.forward(x)
-        print(f'eval took {time() - t} seconds')
         self.set_phase(phase)
         return probs
 

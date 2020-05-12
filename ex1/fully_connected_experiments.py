@@ -232,8 +232,8 @@ def depth(epochs=100):
 
 
 if __name__ == '__main__':
-    epochs = 2
-    grid_search(epochs)
+    epochs = 100
+    # grid_search(epochs)
     optimization(epochs)
     initialization(epochs)
     pca(epochs)
