@@ -17,7 +17,7 @@ def convert_notebook_to_python(work_dir, fname):
 
 def convert_notebook(os_path):
     work_dir, fname = osp.split(os_path)
-    convert_notebook_to_html(work_dir, fname)
+    # convert_notebook_to_html(work_dir, fname)
     convert_notebook_to_python(work_dir, fname)
 
 
