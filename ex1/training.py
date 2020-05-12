@@ -80,9 +80,9 @@ def train_and_eval_fully_connected_model(X_train, y_train, X_test, y_test, class
 def train_and_eval_cnn_model(X_train, y_train, X_test, y_test, class_names, save_dir, model_name,
                              conv_layers_params,
                              weight_decay=0., dropout_drop_probability=0.,
-                             optimizer_type="sgd", learning_rate=0.0001, sgd_momentum=0.9,
+                             optimizer_type="sgd", learning_rate=0.005, sgd_momentum=0.9,
                              init_type='xavier', init_gaussian_std=0.1,
-                             hidden_size=784, epochs=100, batch_size=1, seed=34, num_reports=5):
+                             hidden_size=784, epochs=100, batch_size=32, seed=34, num_reports=5,residual_net=False):
     with RandomStateContextManager(seed):
         num_classes = len(class_names)
         input_size = X_train.shape[1]
@@ -90,7 +90,7 @@ def train_and_eval_cnn_model(X_train, y_train, X_test, y_test, class_names, save
         net = CNNClassifier(num_classes, hidden_size, conv_layers_params,
                             init_type,
                             init_gaussian_std,
-                            dropout_drop_probability)
+                            dropout_drop_probability, residual_net=residual_net)
 
         if optimizer_type.lower() == "sgd":
             optimizer = torch.optim.SGD(net.trainable_params(),
@@ -247,7 +247,8 @@ def save_model(net, metrics, hyper_params, model_name, save_dir):
     os.makedirs(model_dir, exist_ok=True)
 
     with open(osp.join(model_dir, "net.pkl"), 'wb') as f:
-        pickle.dump(net, f)
+        torch.save(net,f)
+        # pickle.dump(net, f)
 
     with open(osp.join(model_dir, "metrics.json"), 'w') as f:
         json.dump(metrics, f, indent=2)

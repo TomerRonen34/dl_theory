@@ -1,22 +1,20 @@
 import os.path as osp
-from cifar_loader import prepare_cifar_data_for_classifier
+from cifar_loader import prepare_cifar_data_for_classifier, PCA_whitened_images, ZCA_whitened_images
 from training import train_and_eval_cnn_model
-from sklearn.decomposition import PCA
 from model_comparison import compare_models
 from cnn import ConvLayerParams
 conv1 = ConvLayerParams(num_kernels=64, kernel_size=3, padding_size=0)
 conv2 = ConvLayerParams(num_kernels=16, kernel_size=3, padding_size=0)
 basic_conv_layers_params = [conv1, conv2]
 
+dataset_dir = "cifar-10-batches-py"
+cache_dir = "data_cache"
+subsample_fraction = 0.1
 
 def grid_search(epochs=10):
     save_dir = osp.join("models", "cnn", "grid_search")
     hyper_param_names_for_label = ["init_gaussian_std", "learning_rate", "sgd_momentum"]
 
-    dataset_dir = "cifar-10-batches-py"
-    cache_dir = "data_cache"
-
-    subsample_fraction = 0.1
     grid_init_gaussian_std = [1e-1, 1e-2, 1e-3]
     grid_learning_rate = [1e-2, 1e-3, 1e-4]
     grid_momentum = [0., 0.5, 0.9]
@@ -90,10 +88,6 @@ def initialization(epochs=10):
     save_dir = osp.join("models", "cnn", "initialization")
     hyper_param_names_for_label = ["init_type"]
 
-    dataset_dir = "cifar-10-batches-py"
-    cache_dir = "data_cache"
-    subsample_fraction = 0.1
-
     X_train, y_train, X_test, y_test, class_names = prepare_cifar_data_for_classifier(dataset_dir, cache_dir,
                                                                                       subsample_fraction,
                                                                                       keep_as_image=True)
@@ -113,10 +107,6 @@ def initialization(epochs=10):
 def regularization(epochs=10):
     save_dir = osp.join("models", "cnn", "regularization")
     hyper_param_names_for_label = ["dropout_drop_probability", "weight_decay"]
-
-    dataset_dir = "cifar-10-batches-py"
-    cache_dir = "data_cache"
-    subsample_fraction = 0.1
 
     X_train, y_train, X_test, y_test, class_names = prepare_cifar_data_for_classifier(dataset_dir, cache_dir,
                                                                                       subsample_fraction,
@@ -140,31 +130,27 @@ def preprocessing(epochs=100):
     save_dir = osp.join("models", "cnn", "preprocessing")
     hyper_param_names_for_label = ["model_name"]
 
-    dataset_dir = "cifar-10-batches-py"
-    cache_dir = "data_cache"
-    subsample_fraction = 0.1
-
     X_train, y_train, X_test, y_test, class_names = prepare_cifar_data_for_classifier(dataset_dir, cache_dir,
-                                                                                      subsample_fraction,
-                                                                                      keep_as_image=True)
+                                                                                      keep_as_image=False)
 
-    pca_model = PCA(whiten=True)
-    pca_model.fit(X_train)
-    X_train_pca = pca_model.transform(X_train)
-    X_test_pca = pca_model.transform(X_test)
+    X_train_pca, X_test_pca = PCA_whitened_images(X_train, X_test)
 
-    for n_components in [5, 10, 20, 100, 3072]:
+    for n_components in [3072]:
         model_name = f"pca_whitened_dim_{n_components}"
         train_and_eval_cnn_model(X_train_pca, y_train, X_test_pca, y_test,
                                  class_names, save_dir, model_name,
                                  basic_conv_layers_params,
+                                 dropout_drop_probability = 0.3,
                                  epochs=epochs)
 
-    model_name = "original_data"
-    train_and_eval_cnn_model(X_train, y_train, X_test, y_test,
-                             class_names, save_dir, model_name,
-                             basic_conv_layers_params,
-                             epochs=epochs)
+    # for n_components in [10,20,100,500,1500,3072]:
+    #     X_train_zca, X_test_zca = ZCA_whitened_images(X_train, X_test, num_components=n_components)
+    #     model_name = f"zca_whitened_dim_{n_components}"
+    #     train_and_eval_cnn_model(X_train_zca, y_train, X_test_zca, y_test,
+    #                              class_names, save_dir, model_name,
+    #                              basic_conv_layers_params,
+    #                              dropout_drop_probability=0.3,
+    #                              epochs=epochs)
 
     compare_models(models_dir=save_dir,
                    hyper_param_names_to_compare=hyper_param_names_for_label)
@@ -173,10 +159,6 @@ def preprocessing(epochs=100):
 def kernel_size(epochs=100):
     save_dir = osp.join("models", "cnn", "kernel_size")
     hyper_param_names_for_label = ["model_name"]
-
-    dataset_dir = "cifar-10-batches-py"
-    cache_dir = "data_cache"
-    subsample_fraction = 0.1
 
     X_train, y_train, X_test, y_test, class_names = prepare_cifar_data_for_classifier(dataset_dir, cache_dir,
                                                                                       subsample_fraction,
@@ -188,6 +170,7 @@ def kernel_size(epochs=100):
     model_name = f"cnn_kernel5"
     train_and_eval_cnn_model(X_train, y_train, X_test, y_test, class_names, save_dir, model_name,
                                  conv_layers_params,
+                                 dropout_drop_probability=0.3,
                                  epochs=epochs)
 
     compare_models(models_dir=save_dir,
@@ -196,10 +179,6 @@ def kernel_size(epochs=100):
 def width(epochs=100):
     save_dir = osp.join("models", "cnn", "width")
     hyper_param_names_for_label = ["model_name"]
-
-    dataset_dir = "cifar-10-batches-py"
-    cache_dir = "data_cache"
-    subsample_fraction = 0.1
 
     X_train, y_train, X_test, y_test, class_names = prepare_cifar_data_for_classifier(dataset_dir, cache_dir,
                                                                                       subsample_fraction,
@@ -212,11 +191,12 @@ def width(epochs=100):
     conv2_2 = ConvLayerParams(num_kernels=256, kernel_size=3, padding_size=0)
     conv_layers_params_2 = [conv2_1, conv2_2]
 
-    for conv_layers_params in [conv_layers_params_2]:
+    for conv_layers_params in [conv_layers_params_1, conv_layers_params_2]:
         model_name = f"kernel_width_{conv_layers_params[0].num_kernels}_{conv_layers_params[1].num_kernels}"
         print('\n', model_name, '\n', '=' * len(model_name))
         train_and_eval_cnn_model(X_train, y_train, X_test, y_test, class_names, save_dir, model_name,
                                  conv_layers_params,
+                                 dropout_drop_probability=0.3,
                                  epochs=epochs)
 
     compare_models(models_dir=save_dir,
@@ -225,37 +205,57 @@ def width(epochs=100):
 
 
 def depth(epochs=100):
-    save_dir = osp.join("models", "cnn", "depth_debug2")
+    save_dir = osp.join("models", "cnn", "depth")
     hyper_param_names_for_label = ["model_name"]
-
-    dataset_dir = "cifar-10-batches-py"
-    cache_dir = "data_cache"
-    subsample_fraction = 0.1
 
     X_train, y_train, X_test, y_test, class_names = prepare_cifar_data_for_classifier(dataset_dir, cache_dir,
                                                                                       subsample_fraction,
                                                                                       keep_as_image=True)
-
     additional_conv = ConvLayerParams(num_kernels=64, kernel_size=3, padding_size=1)
     bigger_net = [additional_conv,additional_conv,additional_conv,conv1,conv2]
-    for num_cnn_layers in [5]:#,4,5]:
+    for num_cnn_layers in [3,4,5]:
         model_name = f"num_layers_{num_cnn_layers}"
         print('\n', model_name, '\n', '=' * len(model_name))
         cur_cnn = bigger_net[5-num_cnn_layers:]
         train_and_eval_cnn_model(X_train, y_train, X_test, y_test, class_names, save_dir, model_name,
                                  cur_cnn,
+                                 dropout_drop_probability=0.3,
                                  epochs=epochs)
 
     compare_models(models_dir=save_dir,
                    hyper_param_names_to_compare=hyper_param_names_for_label)
 
 
+def residuals(epochs=100):
+    save_dir = osp.join("models", "cnn", "residuals")
+    hyper_param_names_for_label = ["model_name"]
+
+    X_train, y_train, X_test, y_test, class_names = prepare_cifar_data_for_classifier(dataset_dir, cache_dir,
+                                                                                      subsample_fraction,
+                                                                                      keep_as_image=True)
+    additional_conv = ConvLayerParams(num_kernels=64, kernel_size=3, padding_size=1)
+    bigger_net = [additional_conv,additional_conv,additional_conv,conv1,conv2]
+    for num_cnn_layers in [4,5,3]:
+        model_name = f"residual_num_layers_{num_cnn_layers}"
+        print('\n', model_name, '\n', '=' * len(model_name))
+        cur_cnn = bigger_net[5-num_cnn_layers:]
+        train_and_eval_cnn_model(X_train, y_train, X_test, y_test, class_names, save_dir, model_name,
+                                 cur_cnn,
+                                 dropout_drop_probability=0.3,
+                                 epochs=epochs,
+                                 residual_net=True)
+
+    compare_models(models_dir=save_dir,
+                   hyper_param_names_to_compare=hyper_param_names_for_label)
+
 if __name__ == '__main__':
-    epochs = 35
+    epochs = 25
     # grid_search(epochs)
     # optimization(epochs)
     # initialization(epochs)
     # regularization(epochs)
     # kernel_size(epochs)
     # width(epochs)
-    depth(epochs)
+    # depth(epochs)
+    # preprocessing(epochs)
+    residuals(epochs)

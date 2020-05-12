@@ -6,6 +6,7 @@ from utils import shuffle_multiple_arrays, device
 from typing import *
 from nptyping import *
 import torch
+from sklearn.decomposition import PCA
 
 def load_cifar_dataset(dataset_dir: str
                        ) -> Tuple[NDArray[(Any, 32, 32, 3), np.uint8],
@@ -21,7 +22,7 @@ def load_cifar_dataset(dataset_dir: str
 
 
 def prepare_cifar_data_for_classifier(dataset_dir: str, cache_dir: str, subsample_fraction: float = 0.1,
-                                      seed: int = 34, keep_as_image=False):
+                                      seed: int = 35, keep_as_image=False):
     if cache_dir is None:
         return _prepare_for_classifier(dataset_dir, keep_as_image, subsample_fraction, seed)
 
@@ -61,7 +62,7 @@ def _prepare_for_classifier(dataset_dir: str, keep_as_image=False, subsample_fra
     test_images, y_test = shuffle_multiple_arrays(orig_test_images, orig_test_labels, seed=seed)
 
     if keep_as_image:
-        X_train = np.rollaxis(train_images, 3, 1) / 255.
+        X_train = np.rollaxis(train_images, 3, 1) / 255. # from N,W,H.C to N,C,W,H
         X_test = np.rollaxis(test_images, 3, 1) / 255.
     else:
         X_train = train_images.reshape(len(train_images), -1) / 255.
@@ -75,6 +76,30 @@ def _prepare_for_classifier(dataset_dir: str, keep_as_image=False, subsample_fra
 
     return X_train, y_train, X_test, y_test, class_names
 
+
+def PCA_whitened_images(X_train, X_test):
+    pca_model = PCA(whiten=True)
+    pca_model.fit(X_train)
+    X_train_pca = pca_model.transform(X_train).reshape(-1,32,32,3) # from N,W*H*C to N,W,H,C
+    X_train_pca = np.rollaxis(X_train_pca,3,1)
+    X_test_pca = pca_model.transform(X_test).reshape(-1,32,32,3)
+    X_test_pca = np.rollaxis(X_test_pca,3,1)
+    return X_train_pca, X_test_pca
+
+def ZCA_whitened_images(X_train, X_test, num_components=-1):
+    mean = np.mean(X_train, axis=0)
+    X_train -= mean
+    X_test -= mean
+    sigma = np.cov(X_train,rowvar=False)
+    U,S,V = np.linalg.svd(sigma)
+    epsilon = 1e-12
+    U_transpose = U.T
+    ZCA_mat = np.dot(U[:,:num_components], np.dot(np.diag(1.0/np.sqrt(S + epsilon)[:num_components]), U_transpose[:num_components,:])) # [M x M]
+    X_train_zca = X_train.dot(ZCA_mat).reshape(-1,32,32,3)
+    X_train_zca = np.rollaxis(X_train_zca,3,1)
+    X_test_zca = X_test.dot(ZCA_mat).reshape(-1,32,32,3)
+    X_test_zca = np.rollaxis(X_test_zca,3,1)
+    return X_train_zca, X_test_zca
 
 def _generate_paths(dataset_dir: str
                     ) -> Tuple[List[str],

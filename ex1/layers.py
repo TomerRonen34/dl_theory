@@ -124,3 +124,11 @@ class Flatten(Layer):
     def forward(self, x):
         batch_size = x.shape[0]
         return x.view(batch_size, -1)
+
+class ResidualLayer(Layer):
+    def __init__(self, layer:Layer):
+        super().__init__()
+        self.layer = layer
+
+    def forward(self, x):
+        return self.layer.forward(x)+x

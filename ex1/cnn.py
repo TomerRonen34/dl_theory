@@ -11,7 +11,8 @@ class CNNClassifier:
                  conv_layers_params,
                  init_type: str = "gaussian",
                  init_gaussian_std: float = 0.001,
-                 dropout_drop_probability: float = 0.):
+                 dropout_drop_probability: float = 0.,
+                 residual_net = False):
         """
         init_type: one of ["gaussian", "xavier"]
         init_gaussian_std: ignored if init_type != "gaussian"
@@ -19,7 +20,13 @@ class CNNClassifier:
 
         assert len(conv_layers_params) >= 2, 'num of convolution layer should be bigger then 2'
         self.phase = "train"
-        self.__init_basic_net(num_classes, hidden_size,
+        if residual_net:
+            self.__init_residual_net(num_classes, hidden_size,
+                                  conv_layers_params,
+                                  init_type, init_gaussian_std,
+                                  dropout_drop_probability)
+        else:
+            self.__init_basic_net(num_classes, hidden_size,
                               conv_layers_params,
                               init_type, init_gaussian_std,
                               dropout_drop_probability)
@@ -35,17 +42,43 @@ class CNNClassifier:
                                     init_type=init_type, init_gaussian_std=init_gaussian_std)
             in_channels = conv_params.num_kernels
             self.layers.append(conv)
+            self.layers.append(ReLU())
 
         fc_layer = FullyConnectedLayer(input_size=7 * 7 * conv_layers_params[-1].num_kernels,
                                        output_size=hidden_layer_size,
                                        init_type=init_type, init_gaussian_std=init_gaussian_std)
         classification_layer = FullyConnectedLayer(input_size=hidden_layer_size, output_size=num_classes,
                                                    init_type=init_type, init_gaussian_std=init_gaussian_std)
-        self.layers.insert(-1, ReLU())
-        self.layers.insert(-1,MaxPool2D(kernel_size=2))
+        self.layers.insert(-2,MaxPool2D(kernel_size=2))
         self.layers.append(MaxPool2D(kernel_size=2))
-        self.layers.append(ReLU())
-        self.layers += [Flatten(), fc_layer, Dropout(dropout_drop_probability), classification_layer]
+        self.layers += [Flatten(),  Dropout(dropout_drop_probability), fc_layer, ReLU(), Dropout(dropout_drop_probability), classification_layer]
+
+    def __init_residual_net(self, num_classes, hidden_layer_size, conv_layers_params: list, init_type='xavier',
+                         init_gaussian_std=None, dropout_drop_probability=0.):
+        self.layers = []
+        in_channels = 3
+        for i in range(len(conv_layers_params)):
+            conv_params = conv_layers_params[i]
+            conv = ConvLayer(in_channels=in_channels, out_channels=conv_params.num_kernels,
+                                    kernel_size=conv_params.kernel_size,
+                                    padding=conv_params.padding_size,
+                                    init_type=init_type, init_gaussian_std=init_gaussian_std)
+            in_channels = conv_params.num_kernels
+            if len(conv_layers_params) - i > 2 and i!=0:
+                res_layer = ResidualLayer(conv)
+                self.layers.append(res_layer)
+            else:
+                self.layers.append(conv)
+            self.layers.append(ReLU())
+
+        fc_layer = FullyConnectedLayer(input_size=7 * 7 * conv_layers_params[-1].num_kernels,
+                                       output_size=hidden_layer_size,
+                                       init_type=init_type, init_gaussian_std=init_gaussian_std)
+        classification_layer = FullyConnectedLayer(input_size=hidden_layer_size, output_size=num_classes,
+                                                   init_type=init_type, init_gaussian_std=init_gaussian_std)
+        self.layers.insert(-2,MaxPool2D(kernel_size=2))
+        self.layers.append(MaxPool2D(kernel_size=2))
+        self.layers += [Flatten(),  Dropout(dropout_drop_probability), fc_layer, ReLU(), Dropout(dropout_drop_probability), classification_layer]
 
     def forward(self, x):
         for hidden_layer in self.layers:
