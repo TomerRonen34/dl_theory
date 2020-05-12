@@ -1,6 +1,7 @@
 import torch
 from utils import device
 
+
 def cross_entropy_loss(probs, targets):
     """
     :param probs: float[samples, classes]

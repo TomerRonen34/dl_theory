@@ -1,13 +1,8 @@
 import os.path as osp
-from cifar_loader import prepare_cifar_data_for_vector_classifier
-from training import train_and_eval_fully_connected_model
+from cifar_loader import prepare_cifar_data
 from sklearn.decomposition import PCA
-from model_comparison import compare_models
 from sklearn.svm import SVC
-from fully_connected import FullyConnectedClassifier
-
-from cifar_loader import load_cifar_dataset
-from utils import shuffle_multiple_arrays, fit_and_save, eval_and_plot
+from utils import fit_and_save, eval_and_plot
 
 
 def linear_svm():
@@ -18,10 +13,11 @@ def linear_svm():
     cache_dir = "data_cache"
     subsample_fraction = 0.1
 
-    X_train, y_train, X_test, y_test, class_names = (
-        prepare_cifar_data_for_vector_classifier(dataset_dir,
-                                                 cache_dir,
-                                                 subsample_fraction))
+    X_train, y_train, X_test, y_test, class_names = \
+        prepare_cifar_data(dataset_dir,
+                           cache_dir,
+                           subsample_fraction,
+                           keep_as_image=False)
     model = SVC(kernel="linear", random_state=seed)
     model_name = "linear_svm"
     model_display_name = "Linear SVM"
@@ -41,10 +37,11 @@ def rbf_svm():
     cache_dir = "data_cache"
     subsample_fraction = 0.1
 
-    X_train, y_train, X_test, y_test, class_names = (
-        prepare_cifar_data_for_vector_classifier(dataset_dir,
-                                                 cache_dir,
-                                                 subsample_fraction))
+    X_train, y_train, X_test, y_test, class_names = \
+        prepare_cifar_data(dataset_dir,
+                           cache_dir,
+                           subsample_fraction,
+                           keep_as_image=False)
     model = SVC(kernel="rbf", random_state=seed)
     model_name = "rbf_svm"
     model_display_name = "SVM with RBF Kernel"
@@ -64,10 +61,11 @@ def rbf_svm_with_pca():
     cache_dir = "data_cache"
     subsample_fraction = 0.1
 
-    X_train, y_train, X_test, y_test, class_names = (
-        prepare_cifar_data_for_vector_classifier(dataset_dir,
-                                                 cache_dir,
-                                                 subsample_fraction))
+    X_train, y_train, X_test, y_test, class_names = \
+        prepare_cifar_data(dataset_dir,
+                           cache_dir,
+                           subsample_fraction,
+                           keep_as_image=False)
 
     pca_model = PCA(whiten=True)
     pca_model.fit(X_train)

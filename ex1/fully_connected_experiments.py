@@ -1,5 +1,5 @@
 import os.path as osp
-from cifar_loader import prepare_cifar_data_for_vector_classifier
+from cifar_loader import prepare_cifar_data
 from training import train_and_eval_fully_connected_model
 from sklearn.decomposition import PCA
 from model_comparison import compare_models
@@ -17,10 +17,11 @@ def grid_search(epochs=100):
     grid_learning_rate = [1e-2, 1e-3, 1e-4]
     grid_momentum = [0., 0.5, 0.9]
 
-    X_train, y_train, X_test, y_test, class_names = (
-        prepare_cifar_data_for_vector_classifier(dataset_dir,
-                                                 cache_dir,
-                                                 subsample_fraction))
+    X_train, y_train, X_test, y_test, class_names = \
+        prepare_cifar_data(dataset_dir,
+                           cache_dir,
+                           subsample_fraction,
+                           keep_as_image=False)
 
     num_models = len(grid_init_gaussian_std) * len(grid_learning_rate) * len(grid_momentum)
     init_type = "gaussian"
@@ -55,10 +56,11 @@ def optimization(epochs=100):
     cache_dir = "data_cache"
     subsample_fraction = 0.1
 
-    X_train, y_train, X_test, y_test, class_names = (
-        prepare_cifar_data_for_vector_classifier(dataset_dir,
-                                                 cache_dir,
-                                                 subsample_fraction))
+    X_train, y_train, X_test, y_test, class_names = \
+        prepare_cifar_data(dataset_dir,
+                           cache_dir,
+                           subsample_fraction,
+                           keep_as_image=False)
     init_type = "gaussian"
     for optimizer_type, learning_rate in [
         ("adam", 0.0005),
@@ -93,10 +95,11 @@ def initialization(epochs=100):
     learning_rate = 0.001
     momentum = 0.9
 
-    X_train, y_train, X_test, y_test, class_names = (
-        prepare_cifar_data_for_vector_classifier(dataset_dir,
-                                                 cache_dir,
-                                                 subsample_fraction))
+    X_train, y_train, X_test, y_test, class_names = \
+        prepare_cifar_data(dataset_dir,
+                           cache_dir,
+                           subsample_fraction,
+                           keep_as_image=False)
 
     for init_type in ["xavier", "gaussian"]:
         model_name = f"fully_connected_{init_type}"
@@ -118,10 +121,11 @@ def pca(epochs=100):
     cache_dir = "data_cache"
     subsample_fraction = 0.1
 
-    X_train, y_train, X_test, y_test, class_names = (
-        prepare_cifar_data_for_vector_classifier(dataset_dir,
-                                                 cache_dir,
-                                                 subsample_fraction))
+    X_train, y_train, X_test, y_test, class_names = \
+        prepare_cifar_data(dataset_dir,
+                           cache_dir,
+                           subsample_fraction,
+                           keep_as_image=False)
 
     pca_model = PCA(whiten=True)
     pca_model.fit(X_train)
@@ -152,10 +156,11 @@ def regularization(epochs=100):
     cache_dir = "data_cache"
     subsample_fraction = 0.1
 
-    X_train, y_train, X_test, y_test, class_names = (
-        prepare_cifar_data_for_vector_classifier(dataset_dir,
-                                                 cache_dir,
-                                                 subsample_fraction))
+    X_train, y_train, X_test, y_test, class_names = \
+        prepare_cifar_data(dataset_dir,
+                           cache_dir,
+                           subsample_fraction,
+                           keep_as_image=False)
 
     for weight_decay in [0., 0.1, 0.05, 0.01, 0.001]:
         for dropout_drop_probability in [0., 0.3, 0.5, 0.8]:
@@ -179,10 +184,11 @@ def width(epochs=100):
     cache_dir = "data_cache"
     subsample_fraction = 0.1
 
-    X_train, y_train, X_test, y_test, class_names = (
-        prepare_cifar_data_for_vector_classifier(dataset_dir,
-                                                 cache_dir,
-                                                 subsample_fraction))
+    X_train, y_train, X_test, y_test, class_names = \
+        prepare_cifar_data(dataset_dir,
+                           cache_dir,
+                           subsample_fraction,
+                           keep_as_image=False)
 
     for log_width in [6, 8, 10, 12]:
         hidden_size = int(2 ** log_width)
@@ -205,10 +211,11 @@ def depth(epochs=100):
     cache_dir = "data_cache"
     subsample_fraction = 0.1
 
-    X_train, y_train, X_test, y_test, class_names = (
-        prepare_cifar_data_for_vector_classifier(dataset_dir,
-                                                 cache_dir,
-                                                 subsample_fraction))
+    X_train, y_train, X_test, y_test, class_names = \
+        prepare_cifar_data(dataset_dir,
+                           cache_dir,
+                           subsample_fraction,
+                           keep_as_image=False)
 
     hidden_size = 64
     for num_hidden_layers in [1, 2, 3, 9]:
@@ -225,7 +232,7 @@ def depth(epochs=100):
 
 
 if __name__ == '__main__':
-    epochs = 100
+    epochs = 2
     grid_search(epochs)
     optimization(epochs)
     initialization(epochs)

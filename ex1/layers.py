@@ -1,6 +1,4 @@
-import torch
 import torch.nn.functional as F
-from typing import Tuple
 from initializers import *
 from abc import ABC, abstractmethod
 
@@ -29,7 +27,7 @@ class Dropout(Layer):
     def forward(self, x):
         if self.phase == "train":
             drop_mask = torch.rand_like(x) < self.drop_probability
-            res = torch.where(drop_mask, torch.zeros(1,device=device), x)
+            res = torch.where(drop_mask, torch.zeros(1, device=device), x)
             res /= 1 - self.drop_probability
             return res
         else:
@@ -99,7 +97,7 @@ class ConvLayer(Layer):
             self.b = zero_init(out_channels)
 
     def forward(self, x):
-          return F.conv2d(x, weight=self.W, bias=self.b, stride=self.stride, padding=self.padding)
+        return F.conv2d(x, weight=self.W, bias=self.b, stride=self.stride, padding=self.padding)
 
     def trainable_params(self):
         params = [self.W]
@@ -125,10 +123,11 @@ class Flatten(Layer):
         batch_size = x.shape[0]
         return x.view(batch_size, -1)
 
+
 class ResidualLayer(Layer):
-    def __init__(self, layer:Layer):
+    def __init__(self, layer: Layer):
         super().__init__()
         self.layer = layer
 
     def forward(self, x):
-        return self.layer.forward(x)+x
+        return self.layer.forward(x) + x

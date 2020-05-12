@@ -2,6 +2,7 @@ import torch
 from layers import FullyConnectedLayer
 from time import time
 
+
 class FullyConnectedClassifier:
     def __init__(self,
                  num_classes: int,
@@ -56,7 +57,7 @@ class FullyConnectedClassifier:
         t = time()
         with torch.no_grad():
             probs = self.forward(x)
-        print(f'eval took {time()-t} seconds')
+        print(f'eval took {time() - t} seconds')
         self.set_phase(phase)
         return probs
 
