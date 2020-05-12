@@ -14,7 +14,7 @@ from typing import *
 def train_and_eval_fully_connected_model(X_train, y_train, X_test, y_test, class_names, save_dir, model_name,
                                          weight_decay=0., dropout_drop_probability=0.,
                                          optimizer_type="sgd", learning_rate=0.001, sgd_momentum=0.9,
-                                         init_type="xavier", init_gaussian_std=0.001,
+                                         init_type="xavier", init_gaussian_std=0.01,
                                          hidden_size=256, num_hidden_layers=1, activation="relu",
                                          epochs=100, batch_size=32, seed=34, num_reports=5):
     with RandomStateContextManager(seed):

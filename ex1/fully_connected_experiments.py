@@ -49,7 +49,7 @@ def grid_search(epochs=100):
 
 def optimization(epochs=100):
     save_dir = osp.join("models", "fully_connected", "optimization")
-    hyper_param_names_for_label = ["optimizer_type"]
+    hyper_param_names_for_label = ["optimizer_type", "learning_rate"]
 
     dataset_dir = "cifar-10-batches-py"
     cache_dir = "data_cache"
@@ -59,16 +59,23 @@ def optimization(epochs=100):
         prepare_cifar_data_for_vector_classifier(dataset_dir,
                                                  cache_dir,
                                                  subsample_fraction))
-
     init_type = "gaussian"
-    for optimizer_type in ["adam", "sgd"]:
-        model_name = optimizer_type
+    for optimizer_type, learning_rate in [
+        ("adam", 0.0005),
+        ("adam", 0.0001),
+        ("adam", 0.01),
+        ("adam", 0.001),
+        ("sgd", 0.001),
+        ("sgd", 0.01),
+    ]:
+        model_name = f"{optimizer_type}_lr_{learning_rate}"
         print('\n', model_name)
         train_and_eval_fully_connected_model(X_train, y_train, X_test, y_test, class_names,
                                              save_dir, model_name,
                                              init_type=init_type,
                                              epochs=epochs,
-                                             optimizer_type=optimizer_type)
+                                             optimizer_type=optimizer_type,
+                                             learning_rate=learning_rate)
 
     compare_models(models_dir=save_dir,
                    hyper_param_names_to_compare=hyper_param_names_for_label)
