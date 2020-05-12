@@ -1,5 +1,5 @@
 from functools import partial
-
+from torch.autograd import Variable
 import numpy as np
 import torch
 from typing import *
@@ -9,14 +9,16 @@ def gaussian_init(shape: Tuple[int],
                   std: float = 1.,
                   mean: float = 0.
                   ) -> torch.Tensor:
-    weights = torch.randn(shape,requires_grad=True) * std + mean
+    weights = torch.randn(shape) * std + mean
+    weights = Variable(weights, requires_grad=True)
     return weights
 
 
 def xavier_init(shape: Tuple[int, int]):
     fan_in, fan_out = shape
     magnitude = np.sqrt(6 / (fan_in + fan_out))
-    weights = magnitude * (2 * torch.rand(shape,requires_grad=True) - 1)
+    weights = magnitude * (2 * torch.rand(shape, requires_grad=True) - 1)
+    weights = Variable(weights, requires_grad=True)
     return weights
 
 
