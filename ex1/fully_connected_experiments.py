@@ -190,7 +190,7 @@ def width(epochs=100):
                            subsample_fraction,
                            keep_as_image=False)
 
-    for log_width in [6, 8, 10, 12]:
+    for log_width in [6, 8, 10, 12, 13]:
         hidden_size = int(2 ** log_width)
         model_name = f"width_{hidden_size}"
         print('\n', model_name, '\n', '=' * len(model_name))
@@ -233,7 +233,7 @@ def depth(epochs=100):
 
 if __name__ == '__main__':
     epochs = 100
-    # grid_search(epochs)
+    grid_search(epochs)
     optimization(epochs)
     initialization(epochs)
     pca(epochs)
