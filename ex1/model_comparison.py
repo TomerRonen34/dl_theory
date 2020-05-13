@@ -76,7 +76,7 @@ def _compare_all():
 
     # optimization
     save_dir = osp.join("models", "fully_connected", "optimization")
-    hyper_param_names_for_label = ["optimizer_type"]
+    hyper_param_names_for_label = ["optimizer_type", "learning_rate"]
     compare_models(save_dir, hyper_param_names_for_label)
 
     # initialization
