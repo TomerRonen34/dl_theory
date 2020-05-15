@@ -162,8 +162,6 @@ def fit_classifier(net,
         "grad_l2": []
     })
 
-    # test_loss, test_accuracy = eval_classifier(net, X_test, y_test)
-
     for curr_epoch in range(1, epochs + 1):
         epoch_seed = seed + curr_epoch if seed is not None else None
         batches = batchify(X_train, y_train, batch_size, seed=epoch_seed)

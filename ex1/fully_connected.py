@@ -1,6 +1,5 @@
 import torch
 from layers import FullyConnectedLayer
-from time import time
 
 
 class FullyConnectedClassifier:
