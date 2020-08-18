@@ -7,6 +7,7 @@ from torch import nn
 from torch.utils.data import DataLoader
 from torch.nn import CrossEntropyLoss
 from torch.optim import Adam
+from sklearn.metrics import classification_report
 
 from utils import RandomStateContextManager
 
@@ -57,16 +58,14 @@ def _calculate_final_model_metrics(net: nn.Module,
                                    trainloader: DataLoader,
                                    testloader: DataLoader
                                    ) -> Dict[str, float]:
-    train_loss, train_accuracy, train_accuracy_per_class = _eval_classifier(net, trainloader)
-    test_loss, test_accuracy, test_accuracy_per_class = _eval_classifier(net, testloader)
+    train_loss, train_classification_metrics = _eval_classifier(net, trainloader)
+    test_loss, test_classification_metrics = _eval_classifier(net, testloader)
     num_params = _count_params(net)
     final_model_metrics = {
         "train_loss": train_loss,
-        "train_accuracy": train_accuracy,
-        "train_accuracy_per_class": train_accuracy_per_class,
+        "train_classification_metrics": train_classification_metrics,
         "test_loss": test_loss,
-        "test_accuracy": test_accuracy,
-        "test_accuracy_per_class": test_accuracy_per_class,
+        "test_classification_metrics": test_classification_metrics,
         "num_params": num_params
     }
     return final_model_metrics
@@ -105,13 +104,14 @@ def _eval_classifier(net, dataloader):
     net.eval()
     with torch.no_grad():
         logits, labels = _infer_net(net, dataloader)
-        pred_labels = logits.argmax(axis=1)
-
+        pred_labels = logits.argmax(axis=1).numpy()
         loss = CrossEntropyLoss()(logits, labels).item()
-        accuracy = _accuracy(pred_labels, labels)
-        accuracy_per_class = _accuracy_per_class(pred_labels, labels, dataloader.dataset.classes)
     net.train()
-    return loss, accuracy, accuracy_per_class
+
+    classification_metrics = classification_report(y_true=labels, y_pred=pred_labels,
+                                                   target_names=dataloader.dataset.classes,
+                                                   output_dict=True)
+    return loss, classification_metrics
 
 
 def _infer_net(net, dataloader):

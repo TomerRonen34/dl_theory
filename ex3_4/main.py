@@ -14,8 +14,8 @@ def train_and_eval_mobilenet(model_name: str,
                              data_root: str = "data",
                              classes_to_keep: Tuple[str, ...] = (
                                      "airplane", "automobile", "horse", "ship")):
-    fraction_to_keep_train = 1.
-    fraction_to_keep_test = 1.
+    fraction_to_keep_train = 1
+    fraction_to_keep_test = 1
 
     print(model_name)
     print('=======================================')
