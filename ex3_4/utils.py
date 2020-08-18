@@ -10,11 +10,13 @@ import torch
 from torch import nn
 
 
-def save_model(save_dir: str,
+def save_model(models_dir: str,
+               model_name: str,
                net: nn.Module,
                final_model_metrics: Dict[str, float],
                training_metrics: Dict[str, List[float]]
                ) -> None:
+    save_dir = osp.join(models_dir, model_name)
     os.makedirs(save_dir, exist_ok=True)
 
     net_path = osp.join(save_dir, "net_state_dict.pth")
@@ -27,6 +29,10 @@ def save_model(save_dir: str,
     training_metrics_path = osp.join(save_dir, "training_metrics.json")
     with open(training_metrics_path, 'w') as f:
         json.dump(training_metrics, f)
+
+    hyper_params_path = osp.join(save_dir, "hyper_params.json")
+    with open(hyper_params_path, 'w') as f:
+        json.dump({"model_name": model_name}, f, indent=2)
 
 
 class RandomStateContextManager:

@@ -1,6 +1,7 @@
 from typing import List, Dict, Tuple
 import math
 
+from pprint import pprint
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
@@ -13,7 +14,7 @@ from utils import RandomStateContextManager
 def fit_classifier(net: nn.Module,
                    trainloader: DataLoader,
                    testloader: DataLoader,
-                   epochs: int = 3,
+                   epochs: int = 10,
                    num_reports_per_epoch: int = 10,
                    random_seed: int = 34
                    ) -> Tuple[Dict[str, float], Dict[str, List[float]]]:
@@ -48,6 +49,7 @@ def fit_classifier(net: nn.Module,
                     _report_progress(i_epoch, epochs, batches_per_epoch, i_batch, training_metrics)
 
         final_model_metrics = _calculate_final_model_metrics(net, trainloader, testloader)
+        pprint(final_model_metrics)
         return final_model_metrics, training_metrics
 
 
