@@ -1,4 +1,4 @@
-from typing import List, Tuple, TypeVar, Dict, Iterable, Union
+from typing import List, Tuple, TypeVar, Dict, Iterable, Union, Any
 import torch
 from torch.utils.data import Dataset, DataLoader
 import torchvision
@@ -9,14 +9,24 @@ import pandas as pd
 from utils import string_to_random_seed
 
 
+class AdversarialTargetReplacementParams:
+    def __init__(self,
+                 replace_from: List[str],
+                 replace_to: List[str],
+                 fraction_to_replace: List[float]):
+        self.replace_from = replace_from
+        self.replace_to = replace_to
+        self.fraction_to_replace = fraction_to_replace
+
+
 def get_cifar_data_loaders(data_root: str,
                            classes_to_keep: Iterable[str] = None,
                            fraction_to_keep_train: float = 1.,
                            fraction_to_keep_test: float = 1.,
                            batch_size: int = 32,
                            num_loader_workers: int = 4,
-                           random_train_targets: bool = False,
-                           specific_adversarial_class_fractions: Dict[str, float] = None
+                           random_train_targets_fraction: float = 0.,
+                           adversarial_target_replacement_params: AdversarialTargetReplacementParams = None
                            ) -> Tuple[DataLoader, DataLoader]:
     trainloader = _get_cifar_data_loader(data_root=data_root,
                                          is_train=True,
@@ -24,16 +34,16 @@ def get_cifar_data_loaders(data_root: str,
                                          fraction_to_keep=fraction_to_keep_train,
                                          batch_size=batch_size,
                                          num_loader_workers=num_loader_workers,
-                                         random_targets=random_train_targets,
-                                         specific_adversarial_class_fractions=specific_adversarial_class_fractions)
+                                         random_targets_fraction=random_train_targets_fraction,
+                                         adversarial_target_replacement_params=adversarial_target_replacement_params)
     testloader = _get_cifar_data_loader(data_root=data_root,
                                         is_train=False,
                                         classes_to_keep=classes_to_keep,
                                         fraction_to_keep=fraction_to_keep_test,
                                         batch_size=batch_size,
                                         num_loader_workers=num_loader_workers,
-                                        random_targets=False,
-                                        specific_adversarial_class_fractions=None)
+                                        random_targets_fraction=False,
+                                        adversarial_target_replacement_params=None)
     return trainloader, testloader
 
 
@@ -43,8 +53,8 @@ def _get_cifar_data_loader(data_root: str,
                            fraction_to_keep: float,
                            batch_size: int,
                            num_loader_workers: int,
-                           random_targets: bool,
-                           specific_adversarial_class_fractions: Union[Dict[str, float], None]
+                           random_targets_fraction: float,
+                           adversarial_target_replacement_params: Union[AdversarialTargetReplacementParams, None]
                            ) -> DataLoader:
     transform = _get_image_transform()
     dataset = torchvision.datasets.CIFAR10(root=data_root, train=is_train,
@@ -53,10 +63,10 @@ def _get_cifar_data_loader(data_root: str,
         _keep_specific_classes_in_dataset(dataset, classes_to_keep)
     if fraction_to_keep != 1.:
         _keep_random_subset_of_dataset(dataset, fraction_to_keep)
-    if random_targets:
-        _randomize_targets_of_dataset(dataset)
-    if specific_adversarial_class_fractions is not None:
-        _randomize_specific_class_fractions(dataset, specific_adversarial_class_fractions)
+    if random_targets_fraction != 0:
+        _randomize_targets_of_dataset(dataset, random_targets_fraction)
+    if adversarial_target_replacement_params is not None:
+        _adversarially_replace_targets(dataset, adversarial_target_replacement_params)
 
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size,
                                              shuffle=True, num_workers=num_loader_workers)
@@ -108,35 +118,45 @@ def _keep_random_subset_of_dataset(dataset: Dataset,
 
 
 def _randomize_targets_of_dataset(dataset: Dataset,
+                                  random_targets_fraction: float,
                                   random_seed: int = 34
                                   ) -> None:
     """ Be warned - this function changes the dataset inplace """
     num_samples = len(dataset.targets)
     num_classes = len(dataset.classes)
+    num_randomize = int(num_samples * random_targets_fraction)
     random_state = np.random.RandomState(random_seed)
-    random_targets = random_state.randint(low=0, high=num_classes, size=num_samples).tolist()
-    dataset.targets = random_targets
 
-
-def _randomize_specific_class_fractions(dataset: Dataset,
-                                        specific_adversarial_class_fractions: Dict[str, float],
-                                        random_seed: int = 34):
-    """ Be warned - this function changes the dataset inplace """
-    num_classes = len(dataset.classes)
     new_targets = np.array(dataset.targets)
-    for class_name, fraction_to_randomize in specific_adversarial_class_fractions.items():
-        class_seed = random_seed + string_to_random_seed(class_name)
+    samples_to_randomize = random_state.permutation(num_samples)[:num_randomize]
+    random_targets = random_state.randint(low=0, high=num_classes, size=num_randomize)
+    new_targets[samples_to_randomize] = random_targets
+
+    dataset.targets = new_targets.tolist()
+
+
+def _adversarially_replace_targets(dataset: Dataset,
+                                   replacement_params: AdversarialTargetReplacementParams,
+                                   random_seed: int = 34):
+    """ Be warned - this function changes the dataset inplace """
+    new_targets = np.array(dataset.targets)
+
+    for class_from, class_to, fraction_to_replace in zip(
+            replacement_params.replace_from,
+            replacement_params.replace_to,
+            replacement_params.fraction_to_replace):
+        class_seed = random_seed + string_to_random_seed(class_from)
         random_state = np.random.RandomState(class_seed)
 
-        class_target = dataset.classes.index(class_name)
-        class_samples, = np.nonzero(np.array(dataset.targets) == class_target)
+        target_from = dataset.classes.index(class_from)
+        target_to = dataset.classes.index(class_to)
+        class_samples, = np.nonzero(np.array(dataset.targets) == target_from)
         num_class_samples = len(class_samples)
 
-        num_randomize = int(num_class_samples * fraction_to_randomize)
+        num_replace = int(num_class_samples * fraction_to_replace)
         perm = random_state.permutation(num_class_samples)
-        samples_to_randomize = class_samples[perm[:num_randomize]]
+        samples_to_replace = class_samples[perm[:num_replace]]
 
-        random_targets = random_state.randint(low=0, high=num_classes, size=num_randomize)
-        new_targets[samples_to_randomize] = random_targets
+        new_targets[samples_to_replace] = target_to
 
     dataset.targets = new_targets.tolist()

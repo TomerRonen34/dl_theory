@@ -1,5 +1,6 @@
 from typing import Tuple, Dict, Union
-from dataset_utils import get_cifar_data_loaders
+
+from dataset_utils import get_cifar_data_loaders, AdversarialTargetReplacementParams
 from mini_mobilenet import get_mini_mobilenet, print_mini_mobilenet_shapes
 from training import fit_classifier
 from utils import save_model
@@ -8,8 +9,8 @@ from model_comparison import compare_models
 
 def train_and_eval_mobilenet(model_name: str,
                              epochs: int,
-                             random_train_targets: bool,
-                             specific_adversarial_class_fractions: Union[Dict[str, float], None],
+                             random_train_targets_fraction: float,
+                             adversarial_target_replacement_params: Union[AdversarialTargetReplacementParams, None],
                              models_dir: str = "models",
                              data_root: str = "data",
                              classes_to_keep: Tuple[str, ...] = (
@@ -23,10 +24,10 @@ def train_and_eval_mobilenet(model_name: str,
     trainloader, testloader = get_cifar_data_loaders(
         data_root=data_root,
         classes_to_keep=classes_to_keep,
-        random_train_targets=random_train_targets,
+        random_train_targets_fraction=random_train_targets_fraction,
         fraction_to_keep_train=fraction_to_keep_train,
         fraction_to_keep_test=fraction_to_keep_test,
-        specific_adversarial_class_fractions=specific_adversarial_class_fractions)
+        adversarial_target_replacement_params=adversarial_target_replacement_params)
 
     num_classes = len(trainloader.dataset.classes)
     net = get_mini_mobilenet(num_classes=num_classes,
@@ -41,21 +42,28 @@ def train_and_eval_mobilenet(model_name: str,
 
 
 def perform_experiments(epochs=10):
+    adversarial_target_replacement_params = AdversarialTargetReplacementParams(
+        replace_from=["horse", "ship"],
+        replace_to=["ship", "horse"],
+        fraction_to_replace=[0.5, 0.5]
+    )
     train_and_eval_mobilenet(model_name="adversarial_targets",
                              epochs=epochs,
-                             random_train_targets=False,
-                             specific_adversarial_class_fractions={
-                                 "horse": 0.5, "ship": 0.5
-                             })
-    train_and_eval_mobilenet(model_name="random_targets",
+                             random_train_targets_fraction=0.,
+                             adversarial_target_replacement_params=adversarial_target_replacement_params)
+    train_and_eval_mobilenet(model_name="half_random_targets",
                              epochs=epochs,
-                             random_train_targets=True,
-                             specific_adversarial_class_fractions=None)
+                             random_train_targets_fraction=0.5,
+                             adversarial_target_replacement_params=None)
+    train_and_eval_mobilenet(model_name="all_random_targets",
+                             epochs=epochs,
+                             random_train_targets_fraction=1.,
+                             adversarial_target_replacement_params=None)
     train_and_eval_mobilenet(model_name="standard",
                              epochs=epochs,
-                             random_train_targets=False,
-                             specific_adversarial_class_fractions=None)
+                             random_train_targets_fraction=0.,
+                             adversarial_target_replacement_params=None)
 
 
 if __name__ == '__main__':
-    perform_experiments(epochs=1)
+    perform_experiments(epochs=10)
