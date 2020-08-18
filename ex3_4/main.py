@@ -29,7 +29,8 @@ def train_and_eval_mobilenet(model_name: str,
         specific_adversarial_class_fractions=specific_adversarial_class_fractions)
 
     num_classes = len(trainloader.dataset.classes)
-    net = get_mini_mobilenet(num_classes=num_classes)
+    net = get_mini_mobilenet(num_classes=num_classes,
+                             remove_batchnorm_layers=True)
     print_mini_mobilenet_shapes(net)
 
     final_model_metrics, training_metrics = fit_classifier(net, trainloader, testloader, epochs)
@@ -57,4 +58,4 @@ def perform_experiments(epochs=10):
 
 
 if __name__ == '__main__':
-    perform_experiments()
+    perform_experiments(epochs=1)
