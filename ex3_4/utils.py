@@ -1,9 +1,9 @@
 from typing import Dict, List
-
 import random
 import json
 import os
 import os.path as osp
+from hashlib import md5
 
 import numpy as np
 import torch
@@ -33,6 +33,11 @@ def save_model(models_dir: str,
     hyper_params_path = osp.join(save_dir, "hyper_params.json")
     with open(hyper_params_path, 'w') as f:
         json.dump({"model_name": model_name}, f, indent=2)
+
+
+def string_to_random_seed(string: str,
+                          max_val: int = 1024):
+    return int(md5(string.encode("utf8")).hexdigest(), 16) % max_val
 
 
 class RandomStateContextManager:

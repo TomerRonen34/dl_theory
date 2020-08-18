@@ -1,4 +1,4 @@
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Iterable
 import math
 
 from pprint import pprint
@@ -57,14 +57,16 @@ def _calculate_final_model_metrics(net: nn.Module,
                                    trainloader: DataLoader,
                                    testloader: DataLoader
                                    ) -> Dict[str, float]:
-    train_loss, train_accuracy = _eval_classifier(net, trainloader)
-    test_loss, test_accuracy = _eval_classifier(net, testloader)
+    train_loss, train_accuracy, train_accuracy_per_class = _eval_classifier(net, trainloader)
+    test_loss, test_accuracy, test_accuracy_per_class = _eval_classifier(net, testloader)
     num_params = _count_params(net)
     final_model_metrics = {
         "train_loss": train_loss,
         "train_accuracy": train_accuracy,
+        "train_accuracy_per_class": train_accuracy_per_class,
         "test_loss": test_loss,
         "test_accuracy": test_accuracy,
+        "test_accuracy_per_class": test_accuracy_per_class,
         "num_params": num_params
     }
     return final_model_metrics
@@ -106,9 +108,10 @@ def _eval_classifier(net, dataloader):
         pred_labels = logits.argmax(axis=1)
 
         loss = CrossEntropyLoss()(logits, labels).item()
-        accuracy = (pred_labels == labels).float().mean().item()
+        accuracy = _accuracy(pred_labels, labels)
+        accuracy_per_class = _accuracy_per_class(pred_labels, labels, dataloader.dataset.classes)
     net.train()
-    return loss, accuracy
+    return loss, accuracy, accuracy_per_class
 
 
 def _infer_net(net, dataloader):
@@ -119,6 +122,26 @@ def _infer_net(net, dataloader):
     logits = torch.cat(logits_per_batch)
     labels = torch.cat(labels_per_batch)
     return logits, labels
+
+
+def _accuracy(pred_labels: torch.LongTensor,
+              labels: torch.LongTensor
+              ) -> float:
+    accuracy = (pred_labels == labels).float().mean().item()
+    return accuracy
+
+
+def _accuracy_per_class(pred_labels: torch.LongTensor,
+                        labels: torch.LongTensor,
+                        classes: Iterable[str]
+                        ) -> Dict[str, float]:
+    accuracy_per_class = {}
+    for i_class, class_name in enumerate(classes):
+        class_pred_labels = (pred_labels == i_class).long()
+        class_labels = (labels == i_class).long()
+        accuracy = _accuracy(class_pred_labels, class_labels)
+        accuracy_per_class[class_name] = accuracy
+    return accuracy_per_class
 
 
 def _count_params(module: nn.Module) -> int:

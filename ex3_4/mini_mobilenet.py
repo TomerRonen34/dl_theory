@@ -28,7 +28,9 @@ def print_mini_mobilenet_shapes(net: MobileNetV2,
                                 input_shape=(3, 32, 32)
                                 ) -> None:
     dummy_inputs = torch.zeros((1,) + input_shape)
+    print()
     print("input shape:               ", dummy_inputs.shape)
     print("net features shape:        ", net.features[:-1](dummy_inputs).shape)
     print("'flat' net features shape: ", net.features(dummy_inputs).shape)
     print("net outputs shape:         ", net(dummy_inputs).shape)
+    print()
