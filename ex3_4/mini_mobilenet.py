@@ -5,16 +5,16 @@ from torchvision.models import mobilenet_v2, MobileNetV2
 from utils import remove_regularization_layers_in_place
 
 
-def get_mini_mobilenet(input_shape=(3, 32, 32),
-                       num_feature_layers=14,
-                       num_classes=10,
-                       remove_batchnorm_layers: bool = False
-                       ) -> MobileNetV2:
+def get_mini_mobilenet_v2(input_shape=(3, 32, 32),
+                          num_feature_layers=14,
+                          num_classes=10,
+                          remove_regularization_layers: bool = False
+                          ) -> MobileNetV2:
     net = mobilenet_v2(pretrained=False)
     net.features = net.features[:num_feature_layers]
     net.features.add_module("reshape_to_mobilenet_convention",
                             ReshapeFeaturesToMobilenetConvention())
-    if remove_batchnorm_layers:
+    if remove_regularization_layers:
         remove_regularization_layers_in_place(net.features)
         remove_regularization_layers_in_place(net.classifier)
 
@@ -35,6 +35,7 @@ def print_mini_mobilenet_shapes(net: MobileNetV2,
                                 ) -> None:
     dummy_inputs = torch.zeros((1,) + input_shape)
     print()
+    print("MobileNetV2 shapes:")
     print("input shape:               ", dummy_inputs.shape)
     print("net features shape:        ", net.features[:-1](dummy_inputs).shape)
     print("'flat' net features shape: ", net.features(dummy_inputs).shape)
