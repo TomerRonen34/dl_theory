@@ -10,29 +10,55 @@ import torch
 from torch import nn
 
 
-def save_model(models_dir: str,
-               model_name: str,
-               net: nn.Module,
-               final_model_metrics: Dict[str, float],
-               training_metrics: Dict[str, List[float]]
-               ) -> None:
+def remove_regularization_layers_in_place(subnet: nn.Module):
+    layer_name_templates_to_remove = ["batchnorm", "dropout"]
+    _remove_layers_in_place(subnet, layer_name_templates_to_remove)
+
+
+def _remove_layers_in_place(subnet: nn.Module,
+                            layer_name_templates_to_remove: List[str]):
+    num_children = len(list(subnet.children()))
+    if num_children != 0:
+        for i_child, child in enumerate(subnet.children()):
+            child_type = str(type(child))
+            if any(to_remove.lower() in child_type.lower()
+                   for to_remove in layer_name_templates_to_remove):
+                subnet[i_child] = nn.Identity()
+            else:
+                _remove_layers_in_place(child,
+                                        layer_name_templates_to_remove)
+
+
+def save_model_metrics(models_dir: str,
+                       model_name: str,
+                       final_model_metrics: Dict[str, float],
+                       training_metrics: Dict[str, List[float]]
+                       ) -> None:
+    save_dir = osp.join(models_dir, model_name)
+    os.makedirs(save_dir, exist_ok=True)
+
+    final_model_metrics_path = osp.join(save_dir, "final_model_metrics.json")
+    with open(final_model_metrics_path, 'w') as f:
+        json.dump(final_model_metrics, f, indent=2)
+
+    training_metrics_path = osp.join(save_dir, "training_metrics.json")
+    with open(training_metrics_path, 'w') as f:
+        json.dump(training_metrics, f, indent=2)
+
+    hyper_params_path = osp.join(save_dir, "hyper_params.json")
+    with open(hyper_params_path, 'w') as f:
+        json.dump({"model_name": model_name}, f, indent=2)
+
+
+def save_model_weights(models_dir: str,
+                       model_name: str,
+                       net: nn.Module
+                       ) -> None:
     save_dir = osp.join(models_dir, model_name)
     os.makedirs(save_dir, exist_ok=True)
 
     net_path = osp.join(save_dir, "net_state_dict.pth")
     torch.save(net.state_dict(), net_path)
-
-    final_model_metrics_path = osp.join(save_dir, "final_model_metrics.json")
-    with open(final_model_metrics_path, 'w') as f:
-        json.dump(final_model_metrics, f)
-
-    training_metrics_path = osp.join(save_dir, "training_metrics.json")
-    with open(training_metrics_path, 'w') as f:
-        json.dump(training_metrics, f)
-
-    hyper_params_path = osp.join(save_dir, "hyper_params.json")
-    with open(hyper_params_path, 'w') as f:
-        json.dump({"model_name": model_name}, f, indent=2)
 
 
 def string_to_random_seed(string: str,

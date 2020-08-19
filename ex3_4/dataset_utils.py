@@ -63,7 +63,7 @@ def _get_cifar_data_loader(data_root: str,
         _keep_specific_classes_in_dataset(dataset, classes_to_keep)
     if fraction_to_keep != 1.:
         _keep_random_subset_of_dataset(dataset, fraction_to_keep)
-    if random_targets_fraction != 0:
+    if random_targets_fraction != 0.:
         _randomize_targets_of_dataset(dataset, random_targets_fraction)
     if adversarial_target_replacement_params is not None:
         _adversarially_replace_targets(dataset, adversarial_target_replacement_params)
