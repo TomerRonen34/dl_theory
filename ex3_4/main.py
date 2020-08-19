@@ -65,8 +65,8 @@ def _get_mini_net(net_architecture: str,
         raise ValueError("Invalid net architecture")
 
 
-def perform_experiments(epochs=10):
-    for net_architecture in ["vgg16", "mobilenet_v2"]:
+def perform_experiments():
+    for net_architecture, epochs in [("vgg16", 10), ("mobilenet_v2", 20)]:
         models_dir = osp.join("models", net_architecture)
 
         adversarial_params_2_classes = AdversarialTargetReplacementParams(
@@ -116,4 +116,4 @@ def perform_experiments(epochs=10):
 
 
 if __name__ == '__main__':
-    perform_experiments(epochs=20)
+    perform_experiments()
