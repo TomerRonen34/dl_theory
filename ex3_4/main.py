@@ -18,10 +18,10 @@ def train_and_eval_model(model_name: str,
                          data_root: str = "data",
                          classes_to_keep: Tuple[str, ...] = (
                                  "airplane", "automobile", "horse", "ship"),
-                         save_trained_weights: bool = False):
-    fraction_to_keep_train = 1
-    fraction_to_keep_test = 1
-
+                         save_trained_weights: bool = False,
+                         fraction_to_keep_train=1.,
+                         fraction_to_keep_test=1.
+                         ):
     print()
     print('=======================================')
     print(model_name)
@@ -66,7 +66,10 @@ def _get_mini_net(net_architecture: str,
 
 
 def perform_experiments():
-    for net_architecture, epochs in [("vgg16", 10), ("mobilenet_v2", 20)]:
+    fraction_to_keep_train = 1.
+
+    # for net_architecture, epochs in [("vgg16", 10), ("mobilenet_v2", 20)]:
+    for net_architecture, epochs in [("mobilenet_v2", 10)]:
         models_dir = osp.join("models", net_architecture)
 
         adversarial_params_2_classes = AdversarialTargetReplacementParams(
@@ -78,7 +81,8 @@ def perform_experiments():
                              random_train_targets_fraction=0.,
                              adversarial_target_replacement_params=adversarial_params_2_classes,
                              net_architecture=net_architecture,
-                             models_dir=models_dir)
+                             models_dir=models_dir,
+                             fraction_to_keep_train=fraction_to_keep_train)
 
         adversarial_params_4_classes = AdversarialTargetReplacementParams(
             replace_from=["horse", "ship", "automobile", "airplane"],
@@ -89,28 +93,40 @@ def perform_experiments():
                              random_train_targets_fraction=0.,
                              adversarial_target_replacement_params=adversarial_params_4_classes,
                              net_architecture=net_architecture,
-                             models_dir=models_dir)
+                             models_dir=models_dir,
+                             fraction_to_keep_train=fraction_to_keep_train)
 
         train_and_eval_model(model_name="half_random_targets",
                              epochs=epochs,
                              random_train_targets_fraction=0.5,
                              adversarial_target_replacement_params=None,
                              net_architecture=net_architecture,
-                             models_dir=models_dir)
+                             models_dir=models_dir,
+                             fraction_to_keep_train=fraction_to_keep_train)
 
         train_and_eval_model(model_name="quarter_random_targets",
                              epochs=epochs,
                              random_train_targets_fraction=0.25,
                              adversarial_target_replacement_params=None,
                              net_architecture=net_architecture,
-                             models_dir=models_dir)
+                             models_dir=models_dir,
+                             fraction_to_keep_train=fraction_to_keep_train)
+
+        train_and_eval_model(model_name="all_random_targets",
+                             epochs=epochs,
+                             random_train_targets_fraction=1.,
+                             adversarial_target_replacement_params=None,
+                             net_architecture=net_architecture,
+                             models_dir=models_dir,
+                             fraction_to_keep_train=fraction_to_keep_train)
 
         train_and_eval_model(model_name="standard",
                              epochs=epochs,
                              random_train_targets_fraction=0.,
                              adversarial_target_replacement_params=None,
                              net_architecture=net_architecture,
-                             models_dir=models_dir)
+                             models_dir=models_dir,
+                             fraction_to_keep_train=fraction_to_keep_train)
 
     print("Done")
 

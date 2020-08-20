@@ -5,23 +5,31 @@ from typing import *
 
 from hyper_params import HyperParams
 from plot_metrics import plot_metrics_by_type
+from comparison_table import create_comparison_table
 
 
 def compare_models(models_dir: str,
                    hyper_param_names_to_compare: List[str]):
-    metrics_per_model = _gather_metrics(models_dir, hyper_param_names_to_compare)
     comparison_dir = osp.join(models_dir, "model_comparison")
-    plot_metrics_by_type(metrics_per_model, comparison_dir)
+
+    final_model_metrics_per_model = _gather_metrics(models_dir, hyper_param_names_to_compare,
+                                                    metric_file_name="final_model_metrics.json")
+    create_comparison_table(final_model_metrics_per_model, comparison_dir)
+
+    training_metrics_per_model = _gather_metrics(models_dir, hyper_param_names_to_compare,
+                                                 metric_file_name="training_metrics.json")
+    plot_metrics_by_type(training_metrics_per_model, comparison_dir)
 
 
 def _gather_metrics(models_dir: str,
-                    hyper_param_names_to_compare: List[str]
+                    hyper_param_names_to_compare: List[str],
+                    metric_file_name: str
                     ) -> Dict[HyperParams, Dict[str, List[float]]]:
     """
     returns metrics_per_model- dict that maps a model label to the model metrics dict
     """
     metrics_per_model = {}
-    metric_files = _find_metric_files(models_dir)
+    metric_files = _find_metric_files(models_dir, metric_file_name)
     for metrics_file in metric_files:
         model_key = _build_model_key(metrics_file, hyper_param_names_to_compare)
         metrics = _load_metrics(metrics_file)
@@ -29,8 +37,9 @@ def _gather_metrics(models_dir: str,
     return metrics_per_model
 
 
-def _find_metric_files(models_dir: str) -> List[str]:
-    file_pattern = osp.join(models_dir, "**", "training_metrics.json")
+def _find_metric_files(models_dir: str,
+                       metric_file_name: str) -> List[str]:
+    file_pattern = osp.join(models_dir, "**", metric_file_name)
     metric_files = glob(file_pattern)
     return metric_files
 
@@ -66,42 +75,6 @@ def _load_metrics(metrics_file: str):
     return metrics
 
 
-def _compare_all():
-    # grid_search
-    save_dir = osp.join("models", "fully_connected", "grid_search")
-    hyper_param_names_for_label = ["init_gaussian_std", "learning_rate", "sgd_momentum"]
-    compare_models(save_dir, hyper_param_names_for_label)
-
-    # optimization
-    save_dir = osp.join("models", "fully_connected", "optimization")
-    hyper_param_names_for_label = ["optimizer_type", "learning_rate"]
-    compare_models(save_dir, hyper_param_names_for_label)
-
-    # initialization
-    save_dir = osp.join("models", "fully_connected", "initialization")
-    hyper_param_names_for_label = ["init_type"]
-    compare_models(save_dir, hyper_param_names_for_label)
-
-    # pca
-    save_dir = osp.join("models", "fully_connected", "pca")
-    hyper_param_names_for_label = ["model_name"]
-    compare_models(save_dir, hyper_param_names_for_label)
-
-    # regularization
-    save_dir = osp.join("models", "fully_connected", "regularization")
-    hyper_param_names_for_label = ["dropout_drop_probability", "weight_decay"]
-    compare_models(save_dir, hyper_param_names_for_label)
-
-    # width
-    save_dir = osp.join("models", "fully_connected", "width")
-    hyper_param_names_for_label = ["hidden_size"]
-    compare_models(save_dir, hyper_param_names_for_label)
-
-    # depth
-    save_dir = osp.join("models", "fully_connected", "depth")
-    hyper_param_names_for_label = ["num_hidden_layers"]
-    compare_models(save_dir, hyper_param_names_for_label)
-
-
 if __name__ == '__main__':
-    _compare_all()
+    compare_models(models_dir="models/mobilenet_v2",
+                   hyper_param_names_to_compare=["model_name"])
